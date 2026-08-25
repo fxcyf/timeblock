@@ -2,6 +2,8 @@
 
 一个为“下班后几小时”设计的轻量时间块应用。它把快速排程和重复日程放在同一个流程里：常规节奏自动出现，临时想做的事一句话就能放进今晚。
 
+在线体验：<https://fxcyf.github.io/timeblock/>
+
 ## 核心体验
 
 - **今晚时间轴**：集中查看 18:30–23:30 的安排、留白和完成进度。
@@ -22,6 +24,12 @@ npm start
 ```
 
 然后打开 `http://localhost:4173`。
+
+## 部署
+
+仓库使用 GitHub Pages 自动部署。推送到 `main` 后，`.github/workflows/deploy-pages.yml` 会发布当前静态站点，无需自建服务器或手动上传文件。
+
+首次部署需要在仓库 Settings → Pages 中将 Source 设为 **GitHub Actions**；后续更新均由工作流自动完成。
 
 ## 测试
 

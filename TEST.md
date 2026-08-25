@@ -44,3 +44,13 @@ npm test
 - 时间块聚焦后按 Enter 或空格可以打开编辑。
 - 弹窗关闭后页面仍可继续操作；错误信息使用 `role="alert"`。
 - 系统设置“减少动态效果”时不依赖动画表达状态。
+
+## 线上部署检查
+
+GitHub Pages 工作流完成后运行：
+
+```bash
+curl --fail --location https://fxcyf.github.io/timeblock/
+```
+
+响应应为 `200`，HTML 中应包含 `<title>Timeblock`。随后在无痕浏览器打开线上地址，确认样式、ECMAScript modules 和本地存储均正常工作。
