@@ -5,16 +5,22 @@ import {
   hasConflict,
   materializeRecurring,
   occursOnDate,
-  parseQuickEntry,
   parseTime,
   recurringRulesConflict,
   selectionRange,
   sortBlocks,
 } from "./src/schedule.js";
+import {
+  colorForEventContent,
+  eventContentCategories,
+  favoriteEventContents,
+  upsertEventContent,
+} from "./src/content.js";
 
 const DAY_START = 18 * 60 + 30;
 const DAY_END = 23 * 60 + 30;
 const PIXELS_PER_MINUTE = 2;
+const DEFAULT_BLOCK_DURATION = 45;
 const STORAGE_KEY = "timeblock-state-v1";
 const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
 const DAY_NAMES = ["日", "一", "二", "三", "四", "五", "六"];
@@ -33,17 +39,25 @@ const defaultRules = [
   { id: "reading", title: "安静阅读", start: 21 * 60 + 20, duration: 30, days: [0, 1, 3, 5], color: "blue", enabled: true },
 ];
 
+const defaultEventContents = [
+  { id: "content-dinner", title: "晚餐 & 放空", category: "用餐", favorite: true, color: "apricot" },
+  { id: "content-workout", title: "运动一下", category: "健康", favorite: true, color: "sage" },
+  { id: "content-reading", title: "安静阅读", category: "兴趣", favorite: true, color: "blue" },
+  { id: "content-wind-down", title: "洗澡 & 收拾", category: "生活", favorite: true, color: "lilac" },
+];
+
 let now = new Date();
 const dateKey = toDateKey(now);
 let state = loadState();
-let defaultDuration = 45;
 let toastTimer;
 let ignoreBlockClickUntil = 0;
 let activeSelection = null;
 let selectionPoint = null;
 
 const elements = {
+  actionOptions: document.querySelector("#actionOptions"),
   actionPicker: document.querySelector("#actionPicker"),
+  blockCategory: document.querySelector("#blockCategory"),
   blockDialog: document.querySelector("#blockDialog"),
   blockDialogKicker: document.querySelector("#blockDialogKicker"),
   blockDialogTitle: document.querySelector("#blockDialogTitle"),
@@ -54,15 +68,22 @@ const elements = {
   blockStart: document.querySelector("#blockStart"),
   blockTitle: document.querySelector("#blockTitle"),
   blocksLayer: document.querySelector("#blocksLayer"),
+  cancelContentButton: document.querySelector("#cancelContentButton"),
   clearDoneButton: document.querySelector("#clearDoneButton"),
+  contentCategory: document.querySelector("#contentCategory"),
+  contentError: document.querySelector("#contentError"),
+  contentFavorite: document.querySelector("#contentFavorite"),
+  contentForm: document.querySelector("#contentForm"),
+  contentListView: document.querySelector("#contentListView"),
+  contentTitle: document.querySelector("#contentTitle"),
+  categoryOptions: document.querySelector("#categoryOptions"),
   dateEyebrow: document.querySelector("#dateEyebrow"),
   dayOptions: document.querySelector("#dayOptions"),
   deleteBlockButton: document.querySelector("#deleteBlockButton"),
   draftSelection: document.querySelector("#draftSelection"),
   nowLine: document.querySelector("#nowLine"),
+  newContentButton: document.querySelector("#newContentButton"),
   progressBar: document.querySelector("#progressBar"),
-  quickForm: document.querySelector("#quickForm"),
-  quickInput: document.querySelector("#quickInput"),
   recurringView: document.querySelector("#recurringView"),
   ruleCount: document.querySelector("#ruleCount"),
   ruleDialog: document.querySelector("#ruleDialog"),
@@ -111,10 +132,11 @@ function loadState() {
   }
 
   const rules = Array.isArray(saved?.rules) ? saved.rules : defaultRules;
+  const eventContents = Array.isArray(saved?.eventContents) ? saved.eventContents : defaultEventContents;
   if (saved?.date === dateKey && Array.isArray(saved.blocks)) {
-    return { date: dateKey, rules, blocks: saved.blocks };
+    return { date: dateKey, rules, blocks: saved.blocks, eventContents };
   }
-  return { date: dateKey, rules, blocks: seedBlocks(rules) };
+  return { date: dateKey, rules, blocks: seedBlocks(rules), eventContents };
 }
 
 function saveState() {
@@ -189,9 +211,9 @@ function renderBlocks() {
     article.style.height = `${(block.end - block.start) * PIXELS_PER_MINUTE}px`;
     article.setAttribute("tabindex", "0");
     article.setAttribute("role", "button");
-    article.setAttribute("aria-label", `${block.title}，${formatTime(block.start)} 到 ${formatTime(block.end)}，点击编辑`);
+    article.setAttribute("aria-label", `${block.category ? `${block.category}，` : ""}${block.title}，${formatTime(block.start)} 到 ${formatTime(block.end)}，点击编辑`);
     article.innerHTML = `
-      <span class="block-time">${formatTime(block.start)} — ${formatTime(block.end)}</span>
+      <span class="block-meta"><span class="block-time">${formatTime(block.start)} — ${formatTime(block.end)}</span>${block.category ? `<span class="block-category">${escapeHtml(block.category)}</span>` : ""}</span>
       <strong class="block-title">${escapeHtml(block.title)}</strong>
       <button class="block-check" aria-label="${block.done ? "标记为未完成" : "标记为已完成"}"><svg><use href="#icon-check"></use></svg></button>
       <span class="resize-handle" aria-hidden="true"></span>
@@ -224,6 +246,20 @@ function renderOverview() {
   elements.progressBar.style.width = `${ratio}%`;
   elements.scheduleProgress.setAttribute("aria-valuenow", String(ratio));
   elements.scheduleProgress.setAttribute("aria-valuetext", `已安排 ${formatDuration(scheduled)}，留白 ${formatDuration(free)}`);
+}
+
+function renderEventContents() {
+  const favorites = favoriteEventContents(state.eventContents);
+  elements.categoryOptions.innerHTML = eventContentCategories(state.eventContents)
+    .map((category) => `<option value="${escapeHtml(category)}"></option>`)
+    .join("");
+  elements.actionOptions.innerHTML = favorites.length
+    ? favorites.map((content) => `<button data-event-content-id="${content.id}" style="--action-color:var(--${content.color || "apricot"})">
+        <span class="action-dot"></span>
+        <span class="action-copy"><strong>${escapeHtml(content.title)}</strong>${content.category ? `<small>${escapeHtml(content.category)}</small>` : ""}</span>
+        <svg><use href="#icon-arrow"></use></svg>
+      </button>`).join("")
+    : '<p class="empty-content">暂无常用内容</p>';
 }
 
 function renderTonightRules() {
@@ -276,6 +312,7 @@ function renderRuleList() {
 function renderAll() {
   renderBlocks();
   renderOverview();
+  renderEventContents();
   renderTonightRules();
   renderWeekStrip();
   renderRuleList();
@@ -292,13 +329,14 @@ function openBlockDialog(id = null, draftOverride = null) {
     const requested = currentMinutes >= DAY_START && currentMinutes < DAY_END
       ? Math.ceil(currentMinutes / 5) * 5
       : DAY_START;
-    const slot = findNextFreeSlot(state.blocks, requested, defaultDuration, DAY_START, DAY_END)
-      || { start: DAY_START, end: DAY_START + defaultDuration };
+    const slot = findNextFreeSlot(state.blocks, requested, DEFAULT_BLOCK_DURATION, DAY_START, DAY_END)
+      || { start: DAY_START, end: DAY_START + DEFAULT_BLOCK_DURATION };
     draft = { title: "", start: slot.start, end: slot.end, color: "apricot" };
   }
   elements.blockDialogKicker.textContent = existing ? "时间块" : "新的时间块";
   elements.blockDialogTitle.textContent = existing ? "编辑今晚的安排" : "把一件事放进今晚";
   elements.blockTitle.value = draft.title;
+  elements.blockCategory.value = draft.category || "";
   elements.blockStart.value = formatTime(draft.start);
   elements.blockEnd.value = formatTime(draft.end);
   elements.deleteBlockButton.hidden = !existing;
@@ -318,6 +356,7 @@ function saveBlock(event) {
     ...existing,
     id,
     title: elements.blockTitle.value.trim(),
+    category: elements.blockCategory.value.trim() || null,
     start,
     end,
     color: elements.blockForm.querySelector('[name="blockColor"]:checked').value,
@@ -362,54 +401,6 @@ function toggleDone(id) {
   renderAll();
   const block = state.blocks.find((item) => item.id === id);
   showToast(block.done ? "完成一项，做得不错" : "已恢复为待完成");
-}
-
-function addQuickBlock(title, duration, explicitStart = null) {
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
-  const requested = explicitStart ?? (
-    currentMinutes >= DAY_START && currentMinutes < DAY_END
-      ? Math.ceil(currentMinutes / 5) * 5
-      : DAY_START
-  );
-  let slot;
-  if (explicitStart !== null) {
-    const candidate = { start: explicitStart, end: explicitStart + duration };
-    if (candidate.start < DAY_START || candidate.end > DAY_END) {
-      showToast(`今晚可安排的时间是 ${formatTime(DAY_START)}—${formatTime(DAY_END)}`);
-      return false;
-    }
-    if (hasConflict(candidate, state.blocks)) {
-      showToast(`${formatTime(explicitStart)} 已有安排，请换个时间`);
-      return false;
-    }
-    slot = candidate;
-  } else {
-    slot = findNextFreeSlot(state.blocks, requested, duration, DAY_START, DAY_END);
-  }
-  if (!slot) {
-    showToast("今晚没有足够的连续空档了，先调整一下时间块吧");
-    return false;
-  }
-
-  const color = /运动|健身|跑步/.test(title) ? "sage"
-    : /读|学习|写/.test(title) ? "blue"
-      : /洗澡|明天|整理/.test(title) ? "lilac" : "apricot";
-  state.blocks.push({ id: `block-${Date.now()}`, title, ...slot, color, done: false });
-  saveState();
-  renderAll();
-  showToast(`已安排在 ${formatTime(slot.start)}`);
-  return true;
-}
-
-function submitQuickEntry(event) {
-  event.preventDefault();
-  const parsed = parseQuickEntry(elements.quickInput.value, defaultDuration);
-  if (!parsed) {
-    elements.quickInput.focus();
-    showToast("先写下今晚想做的事");
-    return;
-  }
-  if (addQuickBlock(parsed.title, parsed.duration, parsed.start)) elements.quickInput.value = "";
 }
 
 function applyRule(ruleId) {
@@ -543,13 +534,35 @@ function positionActionPicker() {
   elements.actionPicker.style.top = `${top}px`;
 }
 
+function showContentList(shouldFocus = false) {
+  elements.contentForm.hidden = true;
+  elements.contentListView.hidden = false;
+  elements.contentError.textContent = "";
+  positionActionPicker();
+  if (shouldFocus) {
+    (elements.actionOptions.querySelector("[data-event-content-id]") || elements.newContentButton).focus({ preventScroll: true });
+  }
+}
+
+function openContentForm() {
+  if (!activeSelection) return;
+  elements.contentForm.reset();
+  elements.contentError.textContent = "";
+  elements.contentListView.hidden = true;
+  elements.contentForm.hidden = false;
+  positionActionPicker();
+  elements.contentTitle.focus({ preventScroll: true });
+}
+
 function showActionPicker(point) {
   if (!activeSelection) return;
   selectionPoint = point;
   elements.selectedRange.textContent = `${formatTime(activeSelection.start)} — ${formatTime(activeSelection.end)}`;
+  renderEventContents();
+  showContentList();
   elements.actionPicker.hidden = false;
   positionActionPicker();
-  elements.actionPicker.querySelector("[data-selection-action]")?.focus({ preventScroll: true });
+  (elements.actionOptions.querySelector("[data-event-content-id]") || elements.newContentButton).focus({ preventScroll: true });
 }
 
 function clearTimelineSelection() {
@@ -561,9 +574,10 @@ function clearTimelineSelection() {
   elements.actionPicker.style.removeProperty("left");
   elements.actionPicker.style.removeProperty("top");
   elements.timeline.classList.remove("selecting");
+  showContentList();
 }
 
-function createBlockFromSelection(title, color) {
+function createBlockFromContent(content) {
   if (!activeSelection) return;
   const range = { ...activeSelection };
   if (hasConflict(range, state.blocks)) {
@@ -573,23 +587,40 @@ function createBlockFromSelection(title, color) {
   }
   state.blocks.push({
     id: `block-${Date.now()}`,
-    title,
+    contentId: content.id,
+    title: content.title,
+    category: content.category || null,
     start: range.start,
     end: range.end,
-    color,
+    color: content.color || "apricot",
     done: false,
   });
   clearTimelineSelection();
   saveState();
   renderAll();
-  showToast(`${formatTime(range.start)}—${formatTime(range.end)} 已安排「${title}」`);
+  showToast(`${formatTime(range.start)}—${formatTime(range.end)} 已安排「${content.title}」`);
 }
 
-function openCustomSelection() {
+function saveEventContent(event) {
+  event.preventDefault();
   if (!activeSelection) return;
-  const draft = { ...activeSelection, title: "", color: "apricot" };
-  clearTimelineSelection();
-  openBlockDialog(null, draft);
+  const title = elements.contentTitle.value.trim();
+  const category = elements.contentCategory.value.trim();
+  if (!title) {
+    elements.contentError.textContent = "请填写事件内容。";
+    elements.contentTitle.focus();
+    return;
+  }
+  const result = upsertEventContent(state.eventContents, {
+    id: `content-${Date.now()}`,
+    title,
+    category,
+    favorite: elements.contentFavorite.checked,
+    color: colorForEventContent(state.eventContents, category, COLORS),
+  });
+  if (!result) return;
+  state.eventContents = result.contents;
+  createBlockFromContent(result.content);
 }
 
 function startTimelineSelection(event) {
@@ -701,6 +732,12 @@ function startPointerAdjustment(event) {
 }
 
 document.addEventListener("click", (event) => {
+  const contentButton = event.target.closest("[data-event-content-id]");
+  if (contentButton) {
+    const content = state.eventContents.find((item) => item.id === contentButton.dataset.eventContentId);
+    if (content) createBlockFromContent(content);
+    return;
+  }
   const applyButton = event.target.closest("[data-apply-rule]");
   if (applyButton) applyRule(applyButton.dataset.applyRule);
 });
@@ -720,23 +757,14 @@ document.addEventListener("keydown", (event) => {
 });
 
 document.querySelectorAll("[data-view]").forEach((button) => button.addEventListener("click", () => switchView(button.dataset.view)));
-document.querySelectorAll("[data-duration]").forEach((button) => {
-  if (button.closest(".duration-row")) {
-    button.addEventListener("click", () => {
-      defaultDuration = Number(button.dataset.duration);
-      document.querySelectorAll(".duration-row [data-duration]").forEach((item) => item.classList.toggle("active", item === button));
-    });
-  }
-});
-document.querySelectorAll(".suggestions button").forEach((button) => button.addEventListener("click", () => addQuickBlock(button.dataset.title, Number(button.dataset.duration))));
-document.querySelectorAll("[data-selection-action]").forEach((button) => button.addEventListener("click", () => createBlockFromSelection(button.dataset.selectionAction, button.dataset.color)));
 document.querySelector("#openAddButton").addEventListener("click", () => openBlockDialog());
 document.querySelector("#mobileAddButton").addEventListener("click", guideToTimeline);
 document.querySelector("#closeActionPicker").addEventListener("click", clearTimelineSelection);
-document.querySelector("#customSelectionAction").addEventListener("click", openCustomSelection);
+elements.newContentButton.addEventListener("click", openContentForm);
+elements.cancelContentButton.addEventListener("click", () => showContentList(true));
 document.querySelector("#manageRulesButton").addEventListener("click", () => switchView("recurring"));
 document.querySelector("#newRuleButton").addEventListener("click", openRuleDialog);
-elements.quickForm.addEventListener("submit", submitQuickEntry);
+elements.contentForm.addEventListener("submit", saveEventContent);
 elements.blockForm.addEventListener("submit", saveBlock);
 elements.deleteBlockButton.addEventListener("click", deleteBlock);
 elements.ruleForm.addEventListener("submit", saveRule);

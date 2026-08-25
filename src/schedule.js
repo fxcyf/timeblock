@@ -1,6 +1,3 @@
-const TIME_PATTERN = /(?:^|\s)([01]?\d|2[0-3])[:：]([0-5]\d)(?=\s|$)/;
-const DURATION_PATTERN = /(\d+)\s*(?:分钟|min(?:ute)?s?|m)(?=\s|$)/i;
-
 export function parseTime(value) {
   if (typeof value === "number") return value;
   const match = String(value).trim().match(/^(\d{1,2}):([0-5]\d)$/);
@@ -70,27 +67,6 @@ export function findNextFreeSlot(blocks, requestedStart, duration, dayStart, day
   }
 
   return cursor + duration <= dayEnd ? { start: cursor, end: cursor + duration } : null;
-}
-
-export function parseQuickEntry(value, fallbackDuration = 30) {
-  const normalized = String(value).trim();
-  if (!normalized) return null;
-
-  const timeMatch = normalized.match(TIME_PATTERN);
-  const durationMatch = normalized.match(DURATION_PATTERN);
-  const start = timeMatch ? Number(timeMatch[1]) * 60 + Number(timeMatch[2]) : null;
-  const duration = durationMatch ? Number(durationMatch[1]) : fallbackDuration;
-  const title = normalized
-    .replace(TIME_PATTERN, " ")
-    .replace(DURATION_PATTERN, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  return {
-    title: title || "未命名安排",
-    start,
-    duration,
-  };
 }
 
 export function occursOnDate(rule, date) {

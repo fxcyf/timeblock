@@ -12,9 +12,7 @@
     <svg class="icon-library" aria-hidden="true">
       <symbol id="icon-timeline" viewBox="0 0 24 24"><path d="M6 3v3M18 3v3M4 9h16M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z"/><path d="M8 13h3v3H8zM14 13h2"/></symbol>
       <symbol id="icon-repeat" viewBox="0 0 24 24"><path d="m17 2 4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/></symbol>
-      <symbol id="icon-spark" viewBox="0 0 24 24"><path d="m12 3 1.1 3.4a6.6 6.6 0 0 0 4.2 4.2l3.4 1.1-3.4 1.1a6.6 6.6 0 0 0-4.2 4.2L12 20.4 10.9 17a6.6 6.6 0 0 0-4.2-4.2l-3.4-1.1 3.4-1.1a6.6 6.6 0 0 0 4.2-4.2L12 3Z"/></symbol>
       <symbol id="icon-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
-      <symbol id="icon-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
       <symbol id="icon-chevron" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
       <symbol id="icon-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
       <symbol id="icon-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
@@ -78,28 +76,6 @@
             </section>
 
             <aside class="planning-panel">
-              <section class="panel-card quick-card">
-                <form id="quickForm">
-                  <label class="quick-input-wrap">
-                    <span class="sr-only">快速输入安排</span>
-                    <input id="quickInput" autocomplete="off" placeholder="19:00 晚餐 40分钟" />
-                    <button type="submit" aria-label="添加到今晚"><svg><use href="#icon-arrow"></use></svg></button>
-                  </label>
-                  <div class="duration-row" aria-label="默认时长">
-                    <button type="button" data-duration="25">25 分</button>
-                    <button type="button" data-duration="45" class="active">45 分</button>
-                    <button type="button" data-duration="60">60 分</button>
-                  </div>
-                </form>
-                <div class="suggestion-wrap">
-                  <div class="suggestions">
-                    <button data-title="晚餐 & 放空" data-duration="45"><span class="suggestion-dot apricot"></span>晚餐</button>
-                    <button data-title="运动一下" data-duration="50"><span class="suggestion-dot sage"></span>运动</button>
-                    <button data-title="安静阅读" data-duration="30"><span class="suggestion-dot blue"></span>阅读</button>
-                  </div>
-                </div>
-              </section>
-
               <section class="panel-card rhythm-card">
                 <div class="panel-heading compact">
                   <svg class="panel-heading-icon" aria-hidden="true"><use href="#icon-repeat"></use></svg>
@@ -133,20 +109,36 @@
         <div><span id="selectedRange">19:00 — 19:45</span><strong class="sr-only" id="actionPickerTitle">选择行动</strong></div>
         <button id="closeActionPicker" aria-label="取消选择">×</button>
       </div>
-      <div class="action-options">
-        <button data-selection-action="晚餐 & 放空" data-color="apricot" style="--action-color:var(--apricot)"><span class="action-dot"></span><strong>晚餐 & 放空</strong><svg><use href="#icon-arrow"></use></svg></button>
-        <button data-selection-action="运动一下" data-color="sage" style="--action-color:var(--sage)"><span class="action-dot"></span><strong>运动一下</strong><svg><use href="#icon-arrow"></use></svg></button>
-        <button data-selection-action="安静阅读" data-color="blue" style="--action-color:var(--blue)"><span class="action-dot"></span><strong>安静阅读</strong><svg><use href="#icon-arrow"></use></svg></button>
-        <button data-selection-action="洗澡 & 收拾" data-color="lilac" style="--action-color:var(--lilac)"><span class="action-dot"></span><strong>洗澡 & 收拾</strong><svg><use href="#icon-arrow"></use></svg></button>
+      <div id="contentListView">
+        <div class="action-options" id="actionOptions"></div>
+        <button class="custom-action" id="newContentButton" aria-label="添加新的事件内容"><svg><use href="#icon-plus"></use></svg></button>
       </div>
-      <button class="custom-action" id="customSelectionAction" aria-label="自定义行动"><svg><use href="#icon-plus"></use></svg></button>
+      <form class="content-form" id="contentForm" hidden>
+        <label class="picker-field">
+          <span class="sr-only">事件内容</span>
+          <input id="contentTitle" maxlength="40" autocomplete="off" placeholder="事件内容" required />
+        </label>
+        <label class="picker-field">
+          <span class="sr-only">分类，可选</span>
+          <input id="contentCategory" list="categoryOptions" maxlength="20" autocomplete="off" placeholder="分类（可选）" />
+        </label>
+        <label class="favorite-choice"><input id="contentFavorite" type="checkbox" /><span>加入常用</span></label>
+        <div class="dialog-error" id="contentError" role="alert"></div>
+        <div class="content-form-actions">
+          <button type="button" class="secondary-button" id="cancelContentButton">返回</button>
+          <button type="submit" class="primary-button">确认</button>
+        </div>
+      </form>
     </div>
+
+    <datalist id="categoryOptions"></datalist>
 
     <dialog id="blockDialog" class="sheet-dialog">
       <form method="dialog" id="blockForm">
         <div class="dialog-heading"><div><span class="section-kicker" id="blockDialogKicker">时间块</span><h2 id="blockDialogTitle">编辑安排</h2></div><button class="close-button" value="cancel" aria-label="关闭">×</button></div>
         <input type="hidden" id="blockId" />
         <label class="field"><span>要做什么</span><input id="blockTitle" required maxlength="40" placeholder="例如：洗澡、阅读、运动" /></label>
+        <label class="field"><span>分类（可选）</span><input id="blockCategory" list="categoryOptions" maxlength="20" placeholder="例如：健康" /></label>
         <div class="field-row">
           <label class="field"><span>开始</span><input id="blockStart" type="time" required /></label>
           <label class="field"><span>结束</span><input id="blockEnd" type="time" required /></label>

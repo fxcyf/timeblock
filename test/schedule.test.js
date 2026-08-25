@@ -7,7 +7,6 @@ import {
   hasConflict,
   materializeRecurring,
   occursOnDate,
-  parseQuickEntry,
   parseTime,
   recurringRulesConflict,
   selectionRange,
@@ -17,19 +16,6 @@ test("parses and validates 24-hour times", () => {
   assert.equal(parseTime("19:30"), 1170);
   assert.equal(parseTime("24:00"), null);
   assert.equal(parseTime("晚饭"), null);
-});
-
-test("parses a compact Chinese quick entry", () => {
-  assert.deepEqual(parseQuickEntry("19:00 吃晚饭 40分钟"), {
-    title: "吃晚饭",
-    start: 1140,
-    duration: 40,
-  });
-  assert.deepEqual(parseQuickEntry("阅读", 25), {
-    title: "阅读",
-    start: null,
-    duration: 25,
-  });
 });
 
 test("detects overlap while allowing adjacent blocks", () => {
