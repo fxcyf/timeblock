@@ -538,7 +538,7 @@ function switchView(viewName) {
   elements.recurringView.classList.toggle("active", !isToday);
   elements.recurringView.hidden = isToday;
   document.querySelectorAll("[data-view]").forEach((button) => button.classList.toggle("active", button.dataset.view === viewName));
-  elements.viewTitle.textContent = isToday ? "把今晚，安排得刚刚好。" : "让规律，替你省下决定。";
+  elements.viewTitle.textContent = isToday ? "今晚计划" : "重复日程";
   elements.clearDoneButton.hidden = !isToday;
   window.location.hash = viewName;
   window.scrollTo({ top: 0, behavior: "smooth" });

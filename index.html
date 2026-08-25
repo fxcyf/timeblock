@@ -58,7 +58,7 @@
         <header class="topbar">
           <div>
             <p class="eyebrow" id="dateEyebrow"></p>
-            <h1 id="viewTitle">把今晚，安排得刚刚好。</h1>
+            <h1 id="viewTitle">今晚计划</h1>
           </div>
           <div class="topbar-actions">
             <button class="quiet-button" id="clearDoneButton">清理已完成</button>
@@ -83,7 +83,7 @@
               <div class="card-heading">
                 <div>
                   <span class="section-kicker">今晚时间轴</span>
-                  <h2>在空白处一划，再选要做的事</h2>
+                  <h2>拖动空白时间创建安排</h2>
                 </div>
                 <div class="timeline-legend"><span></span>15 分钟吸附</div>
               </div>
@@ -113,7 +113,7 @@
               <section class="panel-card quick-card">
                 <div class="panel-heading">
                   <span class="panel-icon coral"><svg><use href="#icon-spark"></use></svg></span>
-                  <div><span class="section-kicker">快速安排</span><h2>想到什么，就放进今晚</h2></div>
+                  <div><span class="section-kicker">快捷方式</span><h2>快速输入</h2></div>
                 </div>
                 <form id="quickForm">
                   <label class="quick-input-wrap">
@@ -173,7 +173,7 @@
 
     <nav class="mobile-nav" aria-label="移动端导航">
       <button class="active" data-view="today"><svg><use href="#icon-timeline"></use></svg><span>今晚</span></button>
-      <button class="mobile-add" id="mobileAddButton" aria-label="到时间轴划选时间"><svg><use href="#icon-select-time"></use></svg></button>
+      <button class="mobile-add" id="mobileAddButton" aria-label="到时间轴划选时间"><svg><use href="#icon-select-time"></use></svg><span>划选</span></button>
       <button data-view="recurring"><svg><use href="#icon-repeat"></use></svg><span>重复</span></button>
     </nav>
 
@@ -183,10 +183,10 @@
         <button id="closeActionPicker" aria-label="取消选择">×</button>
       </div>
       <div class="action-options">
-        <button data-selection-action="晚餐 & 放空" data-color="apricot" style="--action-color:var(--apricot)"><span>🍜</span><strong>晚餐 & 放空</strong><svg><use href="#icon-arrow"></use></svg></button>
-        <button data-selection-action="运动一下" data-color="sage" style="--action-color:var(--sage)"><span>🏃</span><strong>运动一下</strong><svg><use href="#icon-arrow"></use></svg></button>
-        <button data-selection-action="安静阅读" data-color="blue" style="--action-color:var(--blue)"><span>📖</span><strong>安静阅读</strong><svg><use href="#icon-arrow"></use></svg></button>
-        <button data-selection-action="洗澡 & 收拾" data-color="lilac" style="--action-color:var(--lilac)"><span>🫧</span><strong>洗澡 & 收拾</strong><svg><use href="#icon-arrow"></use></svg></button>
+        <button data-selection-action="晚餐 & 放空" data-color="apricot" style="--action-color:var(--apricot)"><span class="action-dot"></span><strong>晚餐 & 放空</strong><svg><use href="#icon-arrow"></use></svg></button>
+        <button data-selection-action="运动一下" data-color="sage" style="--action-color:var(--sage)"><span class="action-dot"></span><strong>运动一下</strong><svg><use href="#icon-arrow"></use></svg></button>
+        <button data-selection-action="安静阅读" data-color="blue" style="--action-color:var(--blue)"><span class="action-dot"></span><strong>安静阅读</strong><svg><use href="#icon-arrow"></use></svg></button>
+        <button data-selection-action="洗澡 & 收拾" data-color="lilac" style="--action-color:var(--lilac)"><span class="action-dot"></span><strong>洗澡 & 收拾</strong><svg><use href="#icon-arrow"></use></svg></button>
       </div>
       <button class="custom-action" id="customSelectionAction"><svg><use href="#icon-plus"></use></svg>换一个行动</button>
     </div>
