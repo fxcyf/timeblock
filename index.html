@@ -20,6 +20,7 @@
       <symbol id="icon-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
       <symbol id="icon-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"/></symbol>
       <symbol id="icon-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+      <symbol id="icon-select-time" viewBox="0 0 24 24"><path d="M5 5h14M5 19h14M12 8v8M9 11l3-3 3 3M9 13l3 3 3-3"/></symbol>
     </svg>
 
     <div class="app-shell">
@@ -82,9 +83,9 @@
               <div class="card-heading">
                 <div>
                   <span class="section-kicker">今晚时间轴</span>
-                  <h2>轻轻拖动，就能调整节奏</h2>
+                  <h2>在空白处一划，再选要做的事</h2>
                 </div>
-                <div class="timeline-legend"><span></span>保留一点呼吸感</div>
+                <div class="timeline-legend"><span></span>15 分钟吸附</div>
               </div>
 
               <div class="timeline-scroll">
@@ -93,13 +94,19 @@
                   <div class="timeline-grid" id="timelineGrid"></div>
                   <div class="now-line" id="nowLine" hidden><span>现在</span></div>
                   <div class="blocks-layer" id="blocksLayer"></div>
+                  <div class="draft-selection" id="draftSelection" hidden aria-live="polite">
+                    <span class="selection-time" id="selectionTime"></span>
+                    <strong>松手选择行动</strong>
+                  </div>
                 </div>
               </div>
 
-              <button class="add-block-line" id="openAddButton">
-                <svg><use href="#icon-plus"></use></svg>
-                添加一个时间块
-              </button>
+              <div class="drag-instruction" id="dragInstruction">
+                <span class="drag-icon"><svg><use href="#icon-select-time"></use></svg></span>
+                <span><strong>按住空白时间，上下滑动</strong><small>划出时段后，点一下行动就完成</small></span>
+                <button id="openAddButton">精确添加</button>
+              </div>
+
             </section>
 
             <aside class="planning-panel">
@@ -166,9 +173,23 @@
 
     <nav class="mobile-nav" aria-label="移动端导航">
       <button class="active" data-view="today"><svg><use href="#icon-timeline"></use></svg><span>今晚</span></button>
-      <button class="mobile-add" id="mobileAddButton" aria-label="添加时间块"><svg><use href="#icon-plus"></use></svg></button>
+      <button class="mobile-add" id="mobileAddButton" aria-label="到时间轴划选时间"><svg><use href="#icon-select-time"></use></svg></button>
       <button data-view="recurring"><svg><use href="#icon-repeat"></use></svg><span>重复</span></button>
     </nav>
+
+    <div class="action-picker" id="actionPicker" role="dialog" aria-labelledby="actionPickerTitle" hidden>
+      <div class="action-picker-heading">
+        <div><span id="selectedRange">19:00 — 19:45</span><strong id="actionPickerTitle">这段时间做什么？</strong></div>
+        <button id="closeActionPicker" aria-label="取消选择">×</button>
+      </div>
+      <div class="action-options">
+        <button data-selection-action="晚餐 & 放空" data-color="apricot" style="--action-color:var(--apricot)"><span>🍜</span><strong>晚餐 & 放空</strong><svg><use href="#icon-arrow"></use></svg></button>
+        <button data-selection-action="运动一下" data-color="sage" style="--action-color:var(--sage)"><span>🏃</span><strong>运动一下</strong><svg><use href="#icon-arrow"></use></svg></button>
+        <button data-selection-action="安静阅读" data-color="blue" style="--action-color:var(--blue)"><span>📖</span><strong>安静阅读</strong><svg><use href="#icon-arrow"></use></svg></button>
+        <button data-selection-action="洗澡 & 收拾" data-color="lilac" style="--action-color:var(--lilac)"><span>🫧</span><strong>洗澡 & 收拾</strong><svg><use href="#icon-arrow"></use></svg></button>
+      </div>
+      <button class="custom-action" id="customSelectionAction"><svg><use href="#icon-plus"></use></svg>换一个行动</button>
+    </div>
 
     <dialog id="blockDialog" class="sheet-dialog">
       <form method="dialog" id="blockForm">

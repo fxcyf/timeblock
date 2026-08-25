@@ -10,6 +10,7 @@ import {
   parseQuickEntry,
   parseTime,
   recurringRulesConflict,
+  selectionRange,
 } from "../src/schedule.js";
 
 test("parses and validates 24-hour times", () => {
@@ -75,4 +76,30 @@ test("rejects overlapping recurring rules that share a day", () => {
 test("formats readable durations", () => {
   assert.equal(formatDuration(35), "35 分钟");
   assert.equal(formatDuration(90), "1 小时 30 分钟");
+});
+
+test("snaps a dragged timeline selection outward to 15-minute steps", () => {
+  assert.deepEqual(selectionRange(19 * 60 + 7, 19 * 60 + 51, 1110, 1410), {
+    start: 19 * 60,
+    end: 20 * 60,
+  });
+  assert.deepEqual(selectionRange(20 * 60 + 52, 20 * 60 + 6, 1110, 1410), {
+    start: 20 * 60,
+    end: 21 * 60,
+  });
+  assert.deepEqual(selectionRange(21 * 60 + 15.02, 21 * 60 + 45.02, 1110, 1410), {
+    start: 21 * 60 + 15,
+    end: 21 * 60 + 45,
+  });
+});
+
+test("turns a tap into a minimum selection and clamps it to the evening", () => {
+  assert.deepEqual(selectionRange(23 * 60 + 28, 23 * 60 + 28, 1110, 1410), {
+    start: 23 * 60 + 15,
+    end: 23 * 60 + 30,
+  });
+  assert.deepEqual(selectionRange(18 * 60, 18 * 60 + 20, 1110, 1410), {
+    start: 18 * 60 + 30,
+    end: 18 * 60 + 45,
+  });
 });

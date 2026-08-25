@@ -35,6 +35,21 @@ export function hasConflict(candidate, blocks, ignoredId = null) {
   });
 }
 
+export function selectionRange(anchor, current, dayStart, dayEnd, step = 15, minimumDuration = 15) {
+  const rawStart = Math.min(anchor, current);
+  const rawEnd = Math.max(anchor, current);
+  const boundaryTolerance = Math.min(0.5, step / 30);
+  let start = Math.max(dayStart, Math.floor((rawStart + boundaryTolerance) / step) * step);
+  let end = Math.min(dayEnd, Math.ceil((rawEnd - boundaryTolerance) / step) * step);
+
+  if (end - start < minimumDuration) {
+    if (start + minimumDuration <= dayEnd) end = start + minimumDuration;
+    else start = Math.max(dayStart, end - minimumDuration);
+  }
+
+  return { start, end };
+}
+
 export function recurringRulesConflict(left, right) {
   const sharesDay = left.days.some((day) => right.days.includes(day));
   if (!sharesDay) return false;

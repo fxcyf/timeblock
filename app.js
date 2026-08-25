@@ -8,6 +8,7 @@ import {
   parseQuickEntry,
   parseTime,
   recurringRulesConflict,
+  selectionRange,
   sortBlocks,
 } from "./src/schedule.js";
 
@@ -38,9 +39,12 @@ let state = loadState();
 let defaultDuration = 45;
 let toastTimer;
 let ignoreBlockClickUntil = 0;
+let activeSelection = null;
+let selectionPoint = null;
 
 const elements = {
   activeRuleSummary: document.querySelector("#activeRuleSummary"),
+  actionPicker: document.querySelector("#actionPicker"),
   balanceHint: document.querySelector("#balanceHint"),
   balanceRing: document.querySelector("#balanceRing"),
   balanceTitle: document.querySelector("#balanceTitle"),
@@ -59,6 +63,7 @@ const elements = {
   dateEyebrow: document.querySelector("#dateEyebrow"),
   dayOptions: document.querySelector("#dayOptions"),
   deleteBlockButton: document.querySelector("#deleteBlockButton"),
+  draftSelection: document.querySelector("#draftSelection"),
   freeLabel: document.querySelector("#freeLabel"),
   nowLine: document.querySelector("#nowLine"),
   planStatus: document.querySelector("#planStatus"),
@@ -74,6 +79,8 @@ const elements = {
   ruleForm: document.querySelector("#ruleForm"),
   ruleList: document.querySelector("#ruleList"),
   scheduledLabel: document.querySelector("#scheduledLabel"),
+  selectedRange: document.querySelector("#selectedRange"),
+  selectionTime: document.querySelector("#selectionTime"),
   timeAxis: document.querySelector("#timeAxis"),
   timeline: document.querySelector("#timeline"),
   timelineGrid: document.querySelector("#timelineGrid"),
@@ -307,11 +314,12 @@ function renderAll() {
   renderRuleList();
 }
 
-function openBlockDialog(id = null) {
+function openBlockDialog(id = null, draftOverride = null) {
+  if (!draftOverride) clearTimelineSelection();
   elements.blockError.textContent = "";
   elements.blockId.value = id || "";
   const existing = id ? state.blocks.find((block) => block.id === id) : null;
-  let draft = existing;
+  let draft = existing || draftOverride;
   if (!draft) {
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
     const requested = currentMinutes >= DAY_START && currentMinutes < DAY_END
@@ -524,6 +532,7 @@ function toggleRule(ruleId, enabled) {
 
 function switchView(viewName) {
   const isToday = viewName === "today";
+  if (!isToday) clearTimelineSelection();
   elements.todayView.classList.toggle("active", isToday);
   elements.todayView.hidden = !isToday;
   elements.recurringView.classList.toggle("active", !isToday);
@@ -533,6 +542,138 @@ function switchView(viewName) {
   elements.clearDoneButton.hidden = !isToday;
   window.location.hash = viewName;
   window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function minuteAtPointer(clientY) {
+  const timelineRect = elements.timeline.getBoundingClientRect();
+  const minute = DAY_START + (clientY - timelineRect.top) / PIXELS_PER_MINUTE;
+  return Math.max(DAY_START, Math.min(DAY_END, minute));
+}
+
+function renderDraftSelection(range) {
+  const conflict = hasConflict(range, state.blocks);
+  activeSelection = range;
+  elements.draftSelection.hidden = false;
+  elements.draftSelection.style.top = `${(range.start - DAY_START) * PIXELS_PER_MINUTE}px`;
+  elements.draftSelection.style.height = `${(range.end - range.start) * PIXELS_PER_MINUTE}px`;
+  elements.draftSelection.classList.toggle("invalid", conflict);
+  elements.draftSelection.classList.toggle("compact", range.end - range.start <= 15);
+  elements.selectionTime.textContent = `${formatTime(range.start)} — ${formatTime(range.end)}`;
+  return conflict;
+}
+
+function positionActionPicker() {
+  if (elements.actionPicker.hidden || !selectionPoint) return;
+  if (window.innerWidth <= 760) {
+    elements.actionPicker.style.removeProperty("left");
+    elements.actionPicker.style.removeProperty("top");
+    return;
+  }
+  const pickerRect = elements.actionPicker.getBoundingClientRect();
+  const left = Math.min(window.innerWidth - pickerRect.width - 14, Math.max(14, selectionPoint.x + 18));
+  const top = Math.min(window.innerHeight - pickerRect.height - 14, Math.max(14, selectionPoint.y - pickerRect.height / 2));
+  elements.actionPicker.style.left = `${left}px`;
+  elements.actionPicker.style.top = `${top}px`;
+}
+
+function showActionPicker(point) {
+  if (!activeSelection) return;
+  selectionPoint = point;
+  elements.selectedRange.textContent = `${formatTime(activeSelection.start)} — ${formatTime(activeSelection.end)}`;
+  elements.actionPicker.hidden = false;
+  elements.draftSelection.querySelector("strong").textContent = "选择一个行动";
+  positionActionPicker();
+  elements.actionPicker.querySelector("[data-selection-action]")?.focus({ preventScroll: true });
+}
+
+function clearTimelineSelection() {
+  activeSelection = null;
+  selectionPoint = null;
+  elements.draftSelection.hidden = true;
+  elements.draftSelection.classList.remove("invalid", "compact");
+  elements.draftSelection.querySelector("strong").textContent = "松手选择行动";
+  elements.actionPicker.hidden = true;
+  elements.actionPicker.style.removeProperty("left");
+  elements.actionPicker.style.removeProperty("top");
+  elements.timeline.classList.remove("selecting");
+}
+
+function createBlockFromSelection(title, color) {
+  if (!activeSelection) return;
+  const range = { ...activeSelection };
+  if (hasConflict(range, state.blocks)) {
+    clearTimelineSelection();
+    showToast("这段时间已有安排，请重新划选");
+    return;
+  }
+  state.blocks.push({
+    id: `block-${Date.now()}`,
+    title,
+    start: range.start,
+    end: range.end,
+    color,
+    done: false,
+  });
+  clearTimelineSelection();
+  saveState();
+  renderAll();
+  showToast(`${formatTime(range.start)}—${formatTime(range.end)} 已安排「${title}」`);
+}
+
+function openCustomSelection() {
+  if (!activeSelection) return;
+  const draft = { ...activeSelection, title: "", color: "apricot" };
+  clearTimelineSelection();
+  openBlockDialog(null, draft);
+}
+
+function startTimelineSelection(event) {
+  if (event.button !== 0 || event.target.closest(".time-block") || event.target.closest("button")) return;
+  const gridRect = elements.timelineGrid.getBoundingClientRect();
+  if (event.clientX < gridRect.left || event.clientX > gridRect.right) return;
+
+  clearTimelineSelection();
+  event.preventDefault();
+  const anchor = minuteAtPointer(event.clientY);
+  elements.timeline.setPointerCapture(event.pointerId);
+  elements.timeline.classList.add("selecting");
+  renderDraftSelection(selectionRange(anchor, anchor, DAY_START, DAY_END));
+
+  const move = (moveEvent) => {
+    moveEvent.preventDefault();
+    renderDraftSelection(selectionRange(anchor, minuteAtPointer(moveEvent.clientY), DAY_START, DAY_END));
+  };
+  const finish = (upEvent) => {
+    elements.timeline.removeEventListener("pointermove", move);
+    elements.timeline.removeEventListener("pointerup", finish);
+    elements.timeline.removeEventListener("pointercancel", cancel);
+    elements.timeline.classList.remove("selecting");
+    if (!activeSelection) return;
+    if (hasConflict(activeSelection, state.blocks)) {
+      clearTimelineSelection();
+      showToast("这段时间已有安排，请在空白处重新划选");
+      return;
+    }
+    showActionPicker({ x: upEvent.clientX, y: upEvent.clientY });
+  };
+  const cancel = () => {
+    elements.timeline.removeEventListener("pointermove", move);
+    elements.timeline.removeEventListener("pointerup", finish);
+    clearTimelineSelection();
+  };
+
+  elements.timeline.addEventListener("pointermove", move);
+  elements.timeline.addEventListener("pointerup", finish);
+  elements.timeline.addEventListener("pointercancel", cancel, { once: true });
+}
+
+function guideToTimeline() {
+  switchView("today");
+  document.querySelector(".timeline-card").scrollIntoView({ behavior: "smooth", block: "start" });
+  elements.timeline.classList.remove("selection-ready");
+  requestAnimationFrame(() => elements.timeline.classList.add("selection-ready"));
+  setTimeout(() => elements.timeline.classList.remove("selection-ready"), 900);
+  showToast("在空白时间上按住，并上下滑动");
 }
 
 function startPointerAdjustment(event) {
@@ -603,6 +744,16 @@ document.addEventListener("change", (event) => {
   if (event.target.matches("[data-toggle-rule]")) toggleRule(event.target.dataset.toggleRule, event.target.checked);
 });
 
+document.addEventListener("pointerdown", (event) => {
+  if (!elements.actionPicker.hidden && !elements.actionPicker.contains(event.target) && !event.target.closest(".timeline")) {
+    clearTimelineSelection();
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !elements.actionPicker.hidden) clearTimelineSelection();
+});
+
 document.querySelectorAll("[data-view]").forEach((button) => button.addEventListener("click", () => switchView(button.dataset.view)));
 document.querySelectorAll("[data-duration]").forEach((button) => {
   if (button.closest(".duration-row")) {
@@ -613,8 +764,11 @@ document.querySelectorAll("[data-duration]").forEach((button) => {
   }
 });
 document.querySelectorAll(".suggestions button").forEach((button) => button.addEventListener("click", () => addQuickBlock(button.dataset.title, Number(button.dataset.duration))));
+document.querySelectorAll("[data-selection-action]").forEach((button) => button.addEventListener("click", () => createBlockFromSelection(button.dataset.selectionAction, button.dataset.color)));
 document.querySelector("#openAddButton").addEventListener("click", () => openBlockDialog());
-document.querySelector("#mobileAddButton").addEventListener("click", () => openBlockDialog());
+document.querySelector("#mobileAddButton").addEventListener("click", guideToTimeline);
+document.querySelector("#closeActionPicker").addEventListener("click", clearTimelineSelection);
+document.querySelector("#customSelectionAction").addEventListener("click", openCustomSelection);
 document.querySelector("#manageRulesButton").addEventListener("click", () => switchView("recurring"));
 document.querySelector("#newRuleButton").addEventListener("click", openRuleDialog);
 document.querySelector(".profile-button").addEventListener("click", () => showToast("所有安排仅保存在这台设备上"));
@@ -637,6 +791,8 @@ document.querySelector("#todayButton").addEventListener("click", () => {
   switchView("today");
   showToast("已经是今天的计划");
 });
+elements.timeline.addEventListener("pointerdown", startTimelineSelection);
+window.addEventListener("resize", positionActionPicker);
 
 renderDate();
 renderTimelineFrame();
