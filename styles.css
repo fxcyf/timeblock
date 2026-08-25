@@ -468,3 +468,71 @@ body { background: var(--bg); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
 }
+
+/* Text-light interface */
+[hidden] { display: none !important; }
+:root { --sidebar: 68px; }
+.sidebar { align-items: center; padding: 24px 12px; }
+.brand { justify-content: center; padding: 0; }
+.main-nav { width: 100%; margin-top: 32px; justify-items: center; }
+.nav-item { position: relative; justify-content: center; width: 42px; min-height: 42px; padding: 0; }
+.nav-item svg { width: 18px; }
+.nav-count { display: none; }
+.main-content { margin-left: var(--sidebar); }
+.topbar { min-height: 34px; margin-bottom: 14px; align-items: center; }
+.eyebrow { margin: 0; color: var(--ink); font-size: 13px; font-weight: 620; letter-spacing: 0; }
+.topbar-actions { margin-left: auto; }
+.topbar-icon { width: 32px; height: 32px; }
+.planner-layout { grid-template-columns: minmax(540px, 1.82fr) minmax(260px, .68fr); }
+.timeline-card { padding-top: 14px; }
+.card-heading { align-items: center; gap: 12px; margin-bottom: 10px; }
+.card-heading .progress-track { flex: 1; margin-left: 70px; }
+.card-heading > .icon-button { flex: 0 0 auto; }
+.timeline-scroll { max-height: calc(100vh - 180px); }
+.drag-instruction { min-height: 38px; margin-top: 8px; padding-top: 8px; font-size: 9px; }
+.drag-icon { width: 24px; height: 24px; }
+.drag-icon svg { width: 14px; }
+.panel-card { padding: 14px; }
+.quick-card form { display: grid; }
+.duration-row { justify-content: flex-end; margin-top: 6px; }
+.duration-row button { padding-inline: 7px; }
+.suggestion-wrap { margin-top: 9px; padding-top: 9px; }
+.suggestions { flex-wrap: nowrap; }
+.suggestions button { flex: 1; justify-content: center; padding-inline: 6px; }
+.panel-heading { min-height: 28px; margin-bottom: 8px; }
+.panel-heading-icon { width: 17px; color: var(--muted); }
+.panel-heading .icon-button { margin-left: auto; }
+.mini-rule { min-height: 43px; }
+.mini-rule button, .rule-add { width: 28px; height: 28px; display: grid; place-items: center; padding: 0; }
+.mini-rule button svg, .rule-add svg { width: 14px; }
+.empty-rules { margin: 4px 0; text-align: center; }
+.action-picker-heading { align-items: center; }
+.action-picker-heading > div { min-height: 29px; align-content: center; }
+.custom-action { min-height: 32px; }
+.recurring-hero { min-height: 44px; padding: 0; border: 0; background: transparent; }
+.recurring-hero h2 { font-size: 14px; }
+.icon-only-button { width: 36px; min-height: 36px; padding: 0; display: grid; place-items: center; }
+.recurring-hero .icon-only-button { width: 36px; flex: 0 0 36px; }
+.week-strip { margin-top: 12px; }
+.rule-list { margin-top: 14px; }
+.rule-add { min-height: 28px; border-radius: 7px; }
+
+@media (max-width: 760px) {
+  .main-content { margin-left: 0; padding: 15px 10px 24px; }
+  .topbar { min-height: 30px; margin-bottom: 9px; padding-inline: 3px; }
+  .topbar-actions { display: none; }
+  .planner-layout { gap: 10px; }
+  .timeline-card { padding: 10px 9px 9px; }
+  .card-heading { margin-bottom: 7px; }
+  .card-heading .progress-track { margin-left: 55px; }
+  .timeline-scroll { max-height: none; }
+  .drag-instruction { min-height: 32px; margin: 6px 0 0 58px; padding-top: 6px; }
+  .panel-card { padding: 12px; }
+  .mobile-nav { height: 54px; padding: 6px 34px max(6px, env(safe-area-inset-bottom)); }
+  .mobile-nav button { min-height: 38px; }
+  .mobile-nav .mobile-add { min-height: 38px; }
+  .action-picker { bottom: 62px; }
+  .recurring-hero { display: flex; min-height: 38px; padding-inline: 3px; }
+  .recurring-hero .icon-only-button { width: 36px; }
+  .week-strip { margin-top: 8px; }
+}

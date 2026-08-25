@@ -27,109 +27,71 @@
       <aside class="sidebar">
         <a class="brand" href="#today" aria-label="Timeblock 首页">
           <span class="brand-mark"><span></span><span></span><span></span></span>
-          <span>timeblock</span>
         </a>
 
         <nav class="main-nav" aria-label="主导航">
-          <button class="nav-item active" data-view="today">
+          <button class="nav-item active" data-view="today" aria-label="今晚">
             <svg><use href="#icon-timeline"></use></svg>
-            <span>今晚</span>
           </button>
-          <button class="nav-item" data-view="recurring">
+          <button class="nav-item" data-view="recurring" aria-label="重复日程">
             <svg><use href="#icon-repeat"></use></svg>
-            <span>重复日程</span>
             <span class="nav-count" id="ruleCount">2</span>
           </button>
         </nav>
-
-        <div class="sidebar-note">
-          <svg><use href="#icon-spark"></use></svg>
-          <p>计划不是把时间填满，<br />是为重要的事留出位置。</p>
-        </div>
-
-        <button class="profile-button" aria-label="打开个人设置">
-          <span class="avatar">CY</span>
-          <span><strong>我的节奏</strong><small>本地保存中</small></span>
-          <svg><use href="#icon-more"></use></svg>
-        </button>
       </aside>
 
       <main class="main-content">
         <header class="topbar">
-          <div>
-            <p class="eyebrow" id="dateEyebrow"></p>
-            <h1 id="viewTitle">今晚计划</h1>
-          </div>
+          <p class="eyebrow" id="dateEyebrow"></p>
+          <h1 class="sr-only" id="viewTitle">今晚</h1>
           <div class="topbar-actions">
-            <button class="quiet-button" id="clearDoneButton">清理已完成</button>
-            <button class="today-button" id="todayButton">今天</button>
+            <button class="icon-button topbar-icon" id="clearDoneButton" aria-label="清理已完成">
+              <svg><use href="#icon-trash"></use></svg>
+            </button>
           </div>
         </header>
 
         <section class="view active" id="todayView" aria-labelledby="viewTitle">
-          <div class="overview-card">
-            <div class="overview-copy">
-              <div class="status-dot"><span></span><span id="planStatus">今晚的计划已就绪</span></div>
-              <div class="plan-window"><strong id="planWindow">18:30 — 23:30</strong><span id="remainingText">为自己留一点空白</span></div>
-            </div>
-            <div class="progress-wrap" aria-label="今晚时间分配">
-              <div class="progress-labels"><span id="scheduledLabel">已安排 0 分钟</span><span id="freeLabel">留白 0 分钟</span></div>
-              <div class="progress-track"><span id="progressBar"></span></div>
-            </div>
-          </div>
-
           <div class="planner-layout">
             <section class="timeline-card" aria-label="今晚时间轴">
               <div class="card-heading">
-                <div>
-                  <span class="section-kicker">今晚时间轴</span>
-                  <h2>拖动空白时间创建安排</h2>
-                </div>
-                <div class="timeline-legend"><span></span>15 分钟吸附</div>
+                <div class="progress-track" id="scheduleProgress" role="progressbar" aria-label="今晚已安排比例" aria-valuemin="0" aria-valuemax="100"><span id="progressBar"></span></div>
+                <button class="icon-button" id="openAddButton" aria-label="精确添加时间块"><svg><use href="#icon-plus"></use></svg></button>
               </div>
 
               <div class="timeline-scroll">
                 <div class="timeline" id="timeline">
                   <div class="time-axis" id="timeAxis"></div>
                   <div class="timeline-grid" id="timelineGrid"></div>
-                  <div class="now-line" id="nowLine" hidden><span>现在</span></div>
+                  <div class="now-line" id="nowLine" hidden><span class="sr-only">现在</span></div>
                   <div class="blocks-layer" id="blocksLayer"></div>
                   <div class="draft-selection" id="draftSelection" hidden aria-live="polite">
                     <span class="selection-time" id="selectionTime"></span>
-                    <strong>松手选择行动</strong>
                   </div>
                 </div>
               </div>
 
               <div class="drag-instruction" id="dragInstruction">
                 <span class="drag-icon"><svg><use href="#icon-select-time"></use></svg></span>
-                <span><strong>按住空白时间，上下滑动</strong><small>划出时段后，点一下行动就完成</small></span>
-                <button id="openAddButton">精确添加</button>
+                <span>拖动空白</span>
               </div>
-
             </section>
 
             <aside class="planning-panel">
               <section class="panel-card quick-card">
-                <div class="panel-heading">
-                  <span class="panel-icon coral"><svg><use href="#icon-spark"></use></svg></span>
-                  <div><span class="section-kicker">快捷方式</span><h2>快速输入</h2></div>
-                </div>
                 <form id="quickForm">
                   <label class="quick-input-wrap">
                     <span class="sr-only">快速输入安排</span>
-                    <input id="quickInput" autocomplete="off" placeholder="例如：19:00 吃晚饭 40分钟" />
+                    <input id="quickInput" autocomplete="off" placeholder="19:00 晚餐 40分钟" />
                     <button type="submit" aria-label="添加到今晚"><svg><use href="#icon-arrow"></use></svg></button>
                   </label>
                   <div class="duration-row" aria-label="默认时长">
-                    <span>默认时长</span>
                     <button type="button" data-duration="25">25 分</button>
                     <button type="button" data-duration="45" class="active">45 分</button>
                     <button type="button" data-duration="60">60 分</button>
                   </div>
                 </form>
                 <div class="suggestion-wrap">
-                  <span>快速添加</span>
                   <div class="suggestions">
                     <button data-title="晚餐 & 放空" data-duration="45"><span class="suggestion-dot apricot"></span>晚餐</button>
                     <button data-title="运动一下" data-duration="50"><span class="suggestion-dot sage"></span>运动</button>
@@ -140,16 +102,10 @@
 
               <section class="panel-card rhythm-card">
                 <div class="panel-heading compact">
-                  <span class="panel-icon sage"><svg><use href="#icon-repeat"></use></svg></span>
-                  <div><span class="section-kicker">我的节奏</span><h2>今晚的重复日程</h2></div>
+                  <svg class="panel-heading-icon" aria-hidden="true"><use href="#icon-repeat"></use></svg>
                   <button class="icon-button" id="manageRulesButton" aria-label="管理重复日程"><svg><use href="#icon-chevron"></use></svg></button>
                 </div>
                 <div id="tonightRules" class="tonight-rules"></div>
-              </section>
-
-              <section class="balance-card">
-                <div class="balance-ring" id="balanceRing"><strong id="balanceValue">0%</strong><span>已安排</span></div>
-                <div><span class="section-kicker">今晚的松弛度</span><h3 id="balanceTitle">刚刚好</h3><p id="balanceHint">留白会让计划更容易完成。</p></div>
               </section>
             </aside>
           </div>
@@ -157,29 +113,24 @@
 
         <section class="view" id="recurringView" aria-labelledby="recurringTitle" hidden>
           <div class="recurring-hero">
-            <div><span class="section-kicker">稳定而不僵硬</span><h2 id="recurringTitle">把常做的事，变成生活的节奏。</h2><p>规则只负责提供一个起点。每天仍然可以移动、跳过，或临时调整。</p></div>
-            <button class="primary-button" id="newRuleButton"><svg><use href="#icon-plus"></use></svg>新建重复日程</button>
+            <h2 id="recurringTitle">重复</h2>
+            <button class="primary-button icon-only-button" id="newRuleButton" aria-label="新建重复日程"><svg><use href="#icon-plus"></use></svg></button>
           </div>
           <div class="week-strip" id="weekStrip" aria-label="一周概览"></div>
-          <div class="rule-list-heading"><div><h2>所有重复日程</h2><span id="activeRuleSummary"></span></div><span>调整规则不会改变过去的安排</span></div>
           <div class="rule-list" id="ruleList"></div>
-          <div class="design-note">
-            <svg><use href="#icon-spark"></use></svg>
-            <div><strong>一个小建议</strong><p>固定“开始的时间”，别把结束塞得太满。日程之间留 10–20 分钟，通常更能坚持。</p></div>
-          </div>
         </section>
       </main>
     </div>
 
     <nav class="mobile-nav" aria-label="移动端导航">
-      <button class="active" data-view="today"><svg><use href="#icon-timeline"></use></svg><span>今晚</span></button>
-      <button class="mobile-add" id="mobileAddButton" aria-label="到时间轴划选时间"><svg><use href="#icon-select-time"></use></svg><span>划选</span></button>
-      <button data-view="recurring"><svg><use href="#icon-repeat"></use></svg><span>重复</span></button>
+      <button class="active" data-view="today" aria-label="今晚"><svg><use href="#icon-timeline"></use></svg></button>
+      <button class="mobile-add" id="mobileAddButton" aria-label="到时间轴划选时间"><svg><use href="#icon-select-time"></use></svg></button>
+      <button data-view="recurring" aria-label="重复日程"><svg><use href="#icon-repeat"></use></svg></button>
     </nav>
 
     <div class="action-picker" id="actionPicker" role="dialog" aria-labelledby="actionPickerTitle" hidden>
       <div class="action-picker-heading">
-        <div><span id="selectedRange">19:00 — 19:45</span><strong id="actionPickerTitle">这段时间做什么？</strong></div>
+        <div><span id="selectedRange">19:00 — 19:45</span><strong class="sr-only" id="actionPickerTitle">选择行动</strong></div>
         <button id="closeActionPicker" aria-label="取消选择">×</button>
       </div>
       <div class="action-options">
@@ -188,7 +139,7 @@
         <button data-selection-action="安静阅读" data-color="blue" style="--action-color:var(--blue)"><span class="action-dot"></span><strong>安静阅读</strong><svg><use href="#icon-arrow"></use></svg></button>
         <button data-selection-action="洗澡 & 收拾" data-color="lilac" style="--action-color:var(--lilac)"><span class="action-dot"></span><strong>洗澡 & 收拾</strong><svg><use href="#icon-arrow"></use></svg></button>
       </div>
-      <button class="custom-action" id="customSelectionAction"><svg><use href="#icon-plus"></use></svg>换一个行动</button>
+      <button class="custom-action" id="customSelectionAction" aria-label="自定义行动"><svg><use href="#icon-plus"></use></svg></button>
     </div>
 
     <dialog id="blockDialog" class="sheet-dialog">

@@ -43,12 +43,7 @@ let activeSelection = null;
 let selectionPoint = null;
 
 const elements = {
-  activeRuleSummary: document.querySelector("#activeRuleSummary"),
   actionPicker: document.querySelector("#actionPicker"),
-  balanceHint: document.querySelector("#balanceHint"),
-  balanceRing: document.querySelector("#balanceRing"),
-  balanceTitle: document.querySelector("#balanceTitle"),
-  balanceValue: document.querySelector("#balanceValue"),
   blockDialog: document.querySelector("#blockDialog"),
   blockDialogKicker: document.querySelector("#blockDialogKicker"),
   blockDialogTitle: document.querySelector("#blockDialogTitle"),
@@ -64,21 +59,17 @@ const elements = {
   dayOptions: document.querySelector("#dayOptions"),
   deleteBlockButton: document.querySelector("#deleteBlockButton"),
   draftSelection: document.querySelector("#draftSelection"),
-  freeLabel: document.querySelector("#freeLabel"),
   nowLine: document.querySelector("#nowLine"),
-  planStatus: document.querySelector("#planStatus"),
-  planWindow: document.querySelector("#planWindow"),
   progressBar: document.querySelector("#progressBar"),
   quickForm: document.querySelector("#quickForm"),
   quickInput: document.querySelector("#quickInput"),
   recurringView: document.querySelector("#recurringView"),
-  remainingText: document.querySelector("#remainingText"),
   ruleCount: document.querySelector("#ruleCount"),
   ruleDialog: document.querySelector("#ruleDialog"),
   ruleError: document.querySelector("#ruleError"),
   ruleForm: document.querySelector("#ruleForm"),
   ruleList: document.querySelector("#ruleList"),
-  scheduledLabel: document.querySelector("#scheduledLabel"),
+  scheduleProgress: document.querySelector("#scheduleProgress"),
   selectedRange: document.querySelector("#selectedRange"),
   selectionTime: document.querySelector("#selectionTime"),
   timeAxis: document.querySelector("#timeAxis"),
@@ -153,8 +144,7 @@ function showToast(message) {
 function renderDate() {
   const month = now.getMonth() + 1;
   const date = now.getDate();
-  elements.dateEyebrow.textContent = `${now.getFullYear()}年${month}月${date}日 · ${FULL_DAY_NAMES[now.getDay()]}`;
-  elements.planWindow.textContent = `${formatTime(DAY_START)} — ${formatTime(DAY_END)}`;
+  elements.dateEyebrow.textContent = `${month}月${date}日 · ${FULL_DAY_NAMES[now.getDay()]}`;
 }
 
 function renderTimelineFrame() {
@@ -231,36 +221,15 @@ function renderOverview() {
   const available = DAY_END - DAY_START;
   const free = Math.max(0, available - scheduled);
   const ratio = Math.min(100, Math.round((scheduled / available) * 100));
-  elements.scheduledLabel.textContent = `已安排 ${formatDuration(scheduled)}`;
-  elements.freeLabel.textContent = `留白 ${formatDuration(free)}`;
   elements.progressBar.style.width = `${ratio}%`;
-  elements.balanceRing.style.setProperty("--value", `${ratio}%`);
-  elements.balanceValue.textContent = `${ratio}%`;
-  elements.remainingText.textContent = `${state.blocks.length} 个时间块 · ${formatDuration(free)} 留白`;
-
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
-  const nextBlock = sortBlocks(state.blocks).find((block) => !block.done && block.end > currentMinutes);
-  if (currentMinutes < DAY_START) elements.planStatus.textContent = "今晚的计划已就绪";
-  else if (currentMinutes > DAY_END) elements.planStatus.textContent = "今天辛苦了，早点休息";
-  else if (nextBlock) elements.planStatus.textContent = `下一项 · ${nextBlock.title}`;
-  else elements.planStatus.textContent = "今晚已经没有待办安排";
-
-  if (ratio <= 75) {
-    elements.balanceTitle.textContent = "刚刚好";
-    elements.balanceHint.textContent = "留白会让计划更容易完成。";
-  } else if (ratio <= 90) {
-    elements.balanceTitle.textContent = "有点充实";
-    elements.balanceHint.textContent = "记得给切换和休息留点时间。";
-  } else {
-    elements.balanceTitle.textContent = "排得有点满";
-    elements.balanceHint.textContent = "可以删掉一项，让今晚轻一点。";
-  }
+  elements.scheduleProgress.setAttribute("aria-valuenow", String(ratio));
+  elements.scheduleProgress.setAttribute("aria-valuetext", `已安排 ${formatDuration(scheduled)}，留白 ${formatDuration(free)}`);
 }
 
 function renderTonightRules() {
   const tonight = state.rules.filter((rule) => occursOnDate(rule, now));
   if (!tonight.length) {
-    elements.tonightRules.innerHTML = '<p class="empty-rules">今晚没有自动日程。想做什么，就从上面快速添加。</p>';
+    elements.tonightRules.innerHTML = '<p class="empty-rules" aria-label="今晚没有重复日程">—</p>';
     return;
   }
   elements.tonightRules.innerHTML = tonight.map((rule) => {
@@ -268,7 +237,7 @@ function renderTonightRules() {
     return `<div class="mini-rule" style="--rule-color:${COLOR_VALUES[rule.color]}">
       <span class="mini-rule-dot"></span>
       <span><strong>${escapeHtml(rule.title)}</strong><small>${formatTime(rule.start)} · ${formatDuration(rule.duration)}</small></span>
-      <button data-apply-rule="${rule.id}" ${added ? "disabled" : ""}>${added ? "已安排" : "加入今晚"}</button>
+      <button data-apply-rule="${rule.id}" aria-label="${added ? "已安排" : `将${escapeHtml(rule.title)}加入今晚`}" ${added ? "disabled" : ""}><svg><use href="#icon-${added ? "check" : "plus"}"></use></svg></button>
     </div>`;
   }).join("");
 }
@@ -292,15 +261,13 @@ function renderWeekStrip() {
 
 function renderRuleList() {
   elements.ruleCount.textContent = state.rules.length;
-  const activeCount = state.rules.filter((rule) => rule.enabled).length;
-  elements.activeRuleSummary.textContent = `${activeCount} 个已启用`;
   elements.ruleList.innerHTML = state.rules.map((rule) => {
     const added = state.blocks.some((block) => block.sourceRuleId === rule.id);
     return `<article class="rule-card${rule.enabled ? "" : " disabled"}" style="--rule-color:${COLOR_VALUES[rule.color]}">
       <span class="rule-color"></span>
       <div class="rule-main"><strong>${escapeHtml(rule.title)}</strong><span class="rule-meta"><svg><use href="#icon-clock"></use></svg>${formatTime(rule.start)} · ${formatDuration(rule.duration)}</span></div>
       <div class="day-chips" aria-label="重复日期">${DAY_ORDER.map((day) => `<span class="${rule.days.includes(day) ? "on" : ""}">${DAY_NAMES[day]}</span>`).join("")}</div>
-      <button class="rule-add" data-apply-rule="${rule.id}" ${added || !rule.enabled ? "disabled" : ""}>${added ? "今晚已安排" : "加入今晚"}</button>
+      <button class="rule-add" data-apply-rule="${rule.id}" aria-label="${added ? "今晚已安排" : `将${escapeHtml(rule.title)}加入今晚`}" ${added || !rule.enabled ? "disabled" : ""}><svg><use href="#icon-${added ? "check" : "plus"}"></use></svg></button>
       <label class="switch" aria-label="${rule.enabled ? "停用" : "启用"}${escapeHtml(rule.title)}"><input type="checkbox" data-toggle-rule="${rule.id}" ${rule.enabled ? "checked" : ""} /><span></span></label>
     </article>`;
   }).join("");
@@ -538,7 +505,7 @@ function switchView(viewName) {
   elements.recurringView.classList.toggle("active", !isToday);
   elements.recurringView.hidden = isToday;
   document.querySelectorAll("[data-view]").forEach((button) => button.classList.toggle("active", button.dataset.view === viewName));
-  elements.viewTitle.textContent = isToday ? "今晚计划" : "重复日程";
+  elements.viewTitle.textContent = isToday ? "今晚" : "重复";
   elements.clearDoneButton.hidden = !isToday;
   window.location.hash = viewName;
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -581,7 +548,6 @@ function showActionPicker(point) {
   selectionPoint = point;
   elements.selectedRange.textContent = `${formatTime(activeSelection.start)} — ${formatTime(activeSelection.end)}`;
   elements.actionPicker.hidden = false;
-  elements.draftSelection.querySelector("strong").textContent = "选择一个行动";
   positionActionPicker();
   elements.actionPicker.querySelector("[data-selection-action]")?.focus({ preventScroll: true });
 }
@@ -591,7 +557,6 @@ function clearTimelineSelection() {
   selectionPoint = null;
   elements.draftSelection.hidden = true;
   elements.draftSelection.classList.remove("invalid", "compact");
-  elements.draftSelection.querySelector("strong").textContent = "松手选择行动";
   elements.actionPicker.hidden = true;
   elements.actionPicker.style.removeProperty("left");
   elements.actionPicker.style.removeProperty("top");
@@ -771,7 +736,6 @@ document.querySelector("#closeActionPicker").addEventListener("click", clearTime
 document.querySelector("#customSelectionAction").addEventListener("click", openCustomSelection);
 document.querySelector("#manageRulesButton").addEventListener("click", () => switchView("recurring"));
 document.querySelector("#newRuleButton").addEventListener("click", openRuleDialog);
-document.querySelector(".profile-button").addEventListener("click", () => showToast("所有安排仅保存在这台设备上"));
 elements.quickForm.addEventListener("submit", submitQuickEntry);
 elements.blockForm.addEventListener("submit", saveBlock);
 elements.deleteBlockButton.addEventListener("click", deleteBlock);
@@ -786,10 +750,6 @@ elements.clearDoneButton.addEventListener("click", () => {
   saveState();
   renderAll();
   showToast(`已清理 ${completed} 个完成项`);
-});
-document.querySelector("#todayButton").addEventListener("click", () => {
-  switchView("today");
-  showToast("已经是今天的计划");
 });
 elements.timeline.addEventListener("pointerdown", startTimelineSelection);
 window.addEventListener("resize", positionActionPicker);

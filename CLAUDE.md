@@ -15,6 +15,7 @@
 - `test/`：Node.js 原生测试；`scripts/serve.mjs`：本地静态服务器
 - 时间在领域层统一表示为当天分钟数，MVP 规划窗口为 18:30–23:30
 - 当天时间块与重复规则保存在浏览器 `localStorage` 的 `timeblock-state-v1`
+- 常驻界面采用文字最少化约定：只显示日期、时间、行动与必要数据，图标按钮必须保留可访问名称
 - `.github/workflows/static.yml`：推送 `main` 后自动发布到 GitHub Pages
 
 ## 开发命令
