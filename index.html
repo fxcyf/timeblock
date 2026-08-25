@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f3f0e8" />
+    <meta name="description" content="Timeblock：快速安排今晚，并用重复日程保持自己的生活节奏。" />
+    <title>Timeblock · 把今晚安排得刚刚好</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <svg class="icon-library" aria-hidden="true">
+      <symbol id="icon-timeline" viewBox="0 0 24 24"><path d="M6 3v3M18 3v3M4 9h16M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z"/><path d="M8 13h3v3H8zM14 13h2"/></symbol>
+      <symbol id="icon-repeat" viewBox="0 0 24 24"><path d="m17 2 4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/></symbol>
+      <symbol id="icon-spark" viewBox="0 0 24 24"><path d="m12 3 1.1 3.4a6.6 6.6 0 0 0 4.2 4.2l3.4 1.1-3.4 1.1a6.6 6.6 0 0 0-4.2 4.2L12 20.4 10.9 17a6.6 6.6 0 0 0-4.2-4.2l-3.4-1.1 3.4-1.1a6.6 6.6 0 0 0 4.2-4.2L12 3Z"/></symbol>
+      <symbol id="icon-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+      <symbol id="icon-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+      <symbol id="icon-chevron" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+      <symbol id="icon-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+      <symbol id="icon-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+      <symbol id="icon-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"/></symbol>
+      <symbol id="icon-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+    </svg>
+
+    <div class="app-shell">
+      <aside class="sidebar">
+        <a class="brand" href="#today" aria-label="Timeblock 首页">
+          <span class="brand-mark"><span></span><span></span><span></span></span>
+          <span>timeblock</span>
+        </a>
+
+        <nav class="main-nav" aria-label="主导航">
+          <button class="nav-item active" data-view="today">
+            <svg><use href="#icon-timeline"></use></svg>
+            <span>今晚</span>
+          </button>
+          <button class="nav-item" data-view="recurring">
+            <svg><use href="#icon-repeat"></use></svg>
+            <span>重复日程</span>
+            <span class="nav-count" id="ruleCount">2</span>
+          </button>
+        </nav>
+
+        <div class="sidebar-note">
+          <svg><use href="#icon-spark"></use></svg>
+          <p>计划不是把时间填满，<br />是为重要的事留出位置。</p>
+        </div>
+
+        <button class="profile-button" aria-label="打开个人设置">
+          <span class="avatar">CY</span>
+          <span><strong>我的节奏</strong><small>本地保存中</small></span>
+          <svg><use href="#icon-more"></use></svg>
+        </button>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow" id="dateEyebrow"></p>
+            <h1 id="viewTitle">把今晚，安排得刚刚好。</h1>
+          </div>
+          <div class="topbar-actions">
+            <button class="quiet-button" id="clearDoneButton">清理已完成</button>
+            <button class="today-button" id="todayButton">今天</button>
+          </div>
+        </header>
+
+        <section class="view active" id="todayView" aria-labelledby="viewTitle">
+          <div class="overview-card">
+            <div class="overview-copy">
+              <div class="status-dot"><span></span><span id="planStatus">今晚的计划已就绪</span></div>
+              <div class="plan-window"><strong id="planWindow">18:30 — 23:30</strong><span id="remainingText">为自己留一点空白</span></div>
+            </div>
+            <div class="progress-wrap" aria-label="今晚时间分配">
+              <div class="progress-labels"><span id="scheduledLabel">已安排 0 分钟</span><span id="freeLabel">留白 0 分钟</span></div>
+              <div class="progress-track"><span id="progressBar"></span></div>
+            </div>
+          </div>
+
+          <div class="planner-layout">
+            <section class="timeline-card" aria-label="今晚时间轴">
+              <div class="card-heading">
+                <div>
+                  <span class="section-kicker">今晚时间轴</span>
+                  <h2>轻轻拖动，就能调整节奏</h2>
+                </div>
+                <div class="timeline-legend"><span></span>保留一点呼吸感</div>
+              </div>
+
+              <div class="timeline-scroll">
+                <div class="timeline" id="timeline">
+                  <div class="time-axis" id="timeAxis"></div>
+                  <div class="timeline-grid" id="timelineGrid"></div>
+                  <div class="now-line" id="nowLine" hidden><span>现在</span></div>
+                  <div class="blocks-layer" id="blocksLayer"></div>
+                </div>
+              </div>
+
+              <button class="add-block-line" id="openAddButton">
+                <svg><use href="#icon-plus"></use></svg>
+                添加一个时间块
+              </button>
+            </section>
+
+            <aside class="planning-panel">
+              <section class="panel-card quick-card">
+                <div class="panel-heading">
+                  <span class="panel-icon coral"><svg><use href="#icon-spark"></use></svg></span>
+                  <div><span class="section-kicker">快速安排</span><h2>想到什么，就放进今晚</h2></div>
+                </div>
+                <form id="quickForm">
+                  <label class="quick-input-wrap">
+                    <span class="sr-only">快速输入安排</span>
+                    <input id="quickInput" autocomplete="off" placeholder="例如：19:00 吃晚饭 40分钟" />
+                    <button type="submit" aria-label="添加到今晚"><svg><use href="#icon-arrow"></use></svg></button>
+                  </label>
+                  <div class="duration-row" aria-label="默认时长">
+                    <span>默认时长</span>
+                    <button type="button" data-duration="25">25 分</button>
+                    <button type="button" data-duration="45" class="active">45 分</button>
+                    <button type="button" data-duration="60">60 分</button>
+                  </div>
+                </form>
+                <div class="suggestion-wrap">
+                  <span>快速添加</span>
+                  <div class="suggestions">
+                    <button data-title="晚餐 & 放空" data-duration="45"><span class="suggestion-dot apricot"></span>晚餐</button>
+                    <button data-title="运动一下" data-duration="50"><span class="suggestion-dot sage"></span>运动</button>
+                    <button data-title="安静阅读" data-duration="30"><span class="suggestion-dot blue"></span>阅读</button>
+                  </div>
+                </div>
+              </section>
+
+              <section class="panel-card rhythm-card">
+                <div class="panel-heading compact">
+                  <span class="panel-icon sage"><svg><use href="#icon-repeat"></use></svg></span>
+                  <div><span class="section-kicker">我的节奏</span><h2>今晚的重复日程</h2></div>
+                  <button class="icon-button" id="manageRulesButton" aria-label="管理重复日程"><svg><use href="#icon-chevron"></use></svg></button>
+                </div>
+                <div id="tonightRules" class="tonight-rules"></div>
+              </section>
+
+              <section class="balance-card">
+                <div class="balance-ring" id="balanceRing"><strong id="balanceValue">0%</strong><span>已安排</span></div>
+                <div><span class="section-kicker">今晚的松弛度</span><h3 id="balanceTitle">刚刚好</h3><p id="balanceHint">留白会让计划更容易完成。</p></div>
+              </section>
+            </aside>
+          </div>
+        </section>
+
+        <section class="view" id="recurringView" aria-labelledby="recurringTitle" hidden>
+          <div class="recurring-hero">
+            <div><span class="section-kicker">稳定而不僵硬</span><h2 id="recurringTitle">把常做的事，变成生活的节奏。</h2><p>规则只负责提供一个起点。每天仍然可以移动、跳过，或临时调整。</p></div>
+            <button class="primary-button" id="newRuleButton"><svg><use href="#icon-plus"></use></svg>新建重复日程</button>
+          </div>
+          <div class="week-strip" id="weekStrip" aria-label="一周概览"></div>
+          <div class="rule-list-heading"><div><h2>所有重复日程</h2><span id="activeRuleSummary"></span></div><span>调整规则不会改变过去的安排</span></div>
+          <div class="rule-list" id="ruleList"></div>
+          <div class="design-note">
+            <svg><use href="#icon-spark"></use></svg>
+            <div><strong>一个小建议</strong><p>固定“开始的时间”，别把结束塞得太满。日程之间留 10–20 分钟，通常更能坚持。</p></div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <nav class="mobile-nav" aria-label="移动端导航">
+      <button class="active" data-view="today"><svg><use href="#icon-timeline"></use></svg><span>今晚</span></button>
+      <button class="mobile-add" id="mobileAddButton" aria-label="添加时间块"><svg><use href="#icon-plus"></use></svg></button>
+      <button data-view="recurring"><svg><use href="#icon-repeat"></use></svg><span>重复</span></button>
+    </nav>
+
+    <dialog id="blockDialog" class="sheet-dialog">
+      <form method="dialog" id="blockForm">
+        <div class="dialog-heading"><div><span class="section-kicker" id="blockDialogKicker">时间块</span><h2 id="blockDialogTitle">编辑安排</h2></div><button class="close-button" value="cancel" aria-label="关闭">×</button></div>
+        <input type="hidden" id="blockId" />
+        <label class="field"><span>要做什么</span><input id="blockTitle" required maxlength="40" placeholder="例如：洗澡、阅读、运动" /></label>
+        <div class="field-row">
+          <label class="field"><span>开始</span><input id="blockStart" type="time" required /></label>
+          <label class="field"><span>结束</span><input id="blockEnd" type="time" required /></label>
+        </div>
+        <fieldset class="color-field"><legend>颜色</legend><div class="color-options">
+          <label><input type="radio" name="blockColor" value="apricot" checked /><span class="apricot"></span></label>
+          <label><input type="radio" name="blockColor" value="sage" /><span class="sage"></span></label>
+          <label><input type="radio" name="blockColor" value="blue" /><span class="blue"></span></label>
+          <label><input type="radio" name="blockColor" value="lilac" /><span class="lilac"></span></label>
+        </div></fieldset>
+        <div class="dialog-error" id="blockError" role="alert"></div>
+        <div class="dialog-actions"><button type="button" class="delete-button" id="deleteBlockButton"><svg><use href="#icon-trash"></use></svg>删除</button><span></span><button value="cancel" class="secondary-button">取消</button><button type="submit" class="primary-button">保存安排</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="ruleDialog" class="sheet-dialog">
+      <form method="dialog" id="ruleForm">
+        <div class="dialog-heading"><div><span class="section-kicker">重复日程</span><h2>新建一个生活节奏</h2></div><button class="close-button" value="cancel" aria-label="关闭">×</button></div>
+        <label class="field"><span>日程名称</span><input id="ruleTitle" required maxlength="40" placeholder="例如：晚间运动" /></label>
+        <div class="field-row">
+          <label class="field"><span>开始时间</span><input id="ruleStart" type="time" value="19:30" required /></label>
+          <label class="field"><span>持续时长</span><select id="ruleDuration"><option value="25">25 分钟</option><option value="45" selected>45 分钟</option><option value="60">1 小时</option><option value="90">1.5 小时</option></select></label>
+        </div>
+        <fieldset class="days-field"><legend>在哪些天重复</legend><div class="day-options" id="dayOptions"></div></fieldset>
+        <div class="dialog-error" id="ruleError" role="alert"></div>
+        <div class="dialog-actions end"><button value="cancel" class="secondary-button">取消</button><button type="submit" class="primary-button">创建日程</button></div>
+      </form>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"><svg><use href="#icon-check"></use></svg><span></span></div>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
