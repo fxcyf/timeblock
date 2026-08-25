@@ -27,7 +27,7 @@ npm start
 
 ## 部署
 
-仓库使用 GitHub Pages 自动部署。推送到 `main` 后，`.github/workflows/deploy-pages.yml` 会发布当前静态站点，无需自建服务器或手动上传文件。
+仓库使用 GitHub Pages 自动部署。推送到 `main` 后，`.github/workflows/static.yml` 会发布当前静态站点，无需自建服务器或手动上传文件。
 
 首次部署需要在仓库 Settings → Pages 中将 Source 设为 **GitHub Actions**；后续更新均由工作流自动完成。
 

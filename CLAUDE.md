@@ -15,7 +15,7 @@
 - `test/`：Node.js 原生测试；`scripts/serve.mjs`：本地静态服务器
 - 时间在领域层统一表示为当天分钟数，MVP 规划窗口为 18:30–23:30
 - 当天时间块与重复规则保存在浏览器 `localStorage` 的 `timeblock-state-v1`
-- `.github/workflows/deploy-pages.yml`：推送 `main` 后自动发布到 GitHub Pages
+- `.github/workflows/static.yml`：推送 `main` 后自动发布到 GitHub Pages
 
 ## 开发命令
 
