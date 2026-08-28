@@ -638,3 +638,35 @@ body { background: var(--bg); }
   .transfer-card { min-height: 96px; }
   .data-note { padding-inline: 3px; line-height: 1.6; }
 }
+
+/* Mobile schedule uses the document as its only scroll container. */
+html.touch-selecting-page,
+html.touch-selecting-page body {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+html.touch-selecting-page body {
+  position: fixed;
+  right: 0;
+  left: 0;
+  width: 100%;
+}
+
+@media (max-width: 760px) {
+  .planning-panel,
+  .timeline-card .card-heading {
+    display: none;
+  }
+
+  .timeline-card {
+    overflow: visible;
+  }
+
+  .timeline-scroll {
+    max-height: none;
+    min-height: 0;
+    overflow: visible;
+    overscroll-behavior: auto;
+  }
+}

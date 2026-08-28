@@ -66,6 +66,7 @@ let ignoreBlockClickUntil = 0;
 let activeSelection = null;
 let selectionPoint = null;
 let touchSelection = null;
+let touchPageScrollPosition = null;
 let suppressContextMenuUntil = 0;
 
 const elements = {
@@ -120,7 +121,6 @@ const elements = {
   timelineScroll: document.querySelector("#timelineScroll"),
   toast: document.querySelector("#toast"),
   topbar: document.querySelector("#topbar"),
-  tonightRules: document.querySelector("#tonightRules"),
   todayView: document.querySelector("#todayView"),
   viewTitle: document.querySelector("#viewTitle"),
   weekStrip: document.querySelector("#weekStrip"),
@@ -349,24 +349,6 @@ function renderDataSummary() {
   elements.dataSummary.textContent = `${state.eventContents.length} 内容 · ${categoryCount} 分类 · ${state.rules.length} 规则`;
 }
 
-function renderTonightRules() {
-  const focusedDate = dateForSchedule(focusDateKey);
-  const focusedBlocks = blocksForDate(focusDateKey);
-  const tonight = state.rules.filter((rule) => occursOnDate(rule, focusedDate));
-  if (!tonight.length) {
-    elements.tonightRules.innerHTML = '<p class="empty-rules" aria-label="该日没有重复日程">—</p>';
-    return;
-  }
-  elements.tonightRules.innerHTML = tonight.map((rule) => {
-    const added = focusedBlocks.some((block) => block.sourceRuleId === rule.id);
-    return `<div class="mini-rule" style="--rule-color:${COLOR_VALUES[rule.color]}">
-      <span class="mini-rule-dot"></span>
-      <span><strong>${escapeHtml(rule.title)}</strong><small>${formatTime(rule.start)} · ${formatDuration(rule.duration)}</small></span>
-      <button data-apply-rule="${escapeHtml(rule.id)}" aria-label="${added ? "已安排" : `将${escapeHtml(rule.title)}加入该日`}" ${added ? "disabled" : ""}><svg><use href="#icon-${added ? "check" : "plus"}"></use></svg></button>
-    </div>`;
-  }).join("");
-}
-
 function renderWeekStrip() {
   const start = new Date(now);
   const offset = now.getDay() === 0 ? -6 : 1 - now.getDay();
@@ -399,18 +381,68 @@ function renderRuleList() {
   }).join("");
 }
 
+function usesPageTimelineScroll() {
+  return window.matchMedia("(max-width: 760px)").matches;
+}
+
+function timelineDocumentTop() {
+  return elements.timeline.getBoundingClientRect().top + window.scrollY;
+}
+
+function readTimelineScrollPosition() {
+  return usesPageTimelineScroll() ? window.scrollY : elements.timelineScroll.scrollTop;
+}
+
+function restoreDocumentScrollPosition(position) {
+  const previousBehavior = document.documentElement.style.scrollBehavior;
+  document.documentElement.style.scrollBehavior = "auto";
+  window.scrollTo(0, position);
+  document.documentElement.style.scrollBehavior = previousBehavior;
+}
+
+function restoreTimelineScrollPosition(position) {
+  if (usesPageTimelineScroll()) return restoreDocumentScrollPosition(position);
+  elements.timelineScroll.scrollTop = position;
+}
+
+function scrollTimelineToOffset(offset) {
+  restoreTimelineScrollPosition(usesPageTimelineScroll() ? timelineDocumentTop() + offset : offset);
+}
+
+function setTouchScrollLock(active, position = null) {
+  if (!active) {
+    elements.timelineScroll.classList.remove("touch-selecting");
+    if (touchPageScrollPosition === null) return;
+    const restorePosition = touchPageScrollPosition;
+    touchPageScrollPosition = null;
+    document.documentElement.classList.remove("touch-selecting-page");
+    document.body.style.removeProperty("top");
+    restoreDocumentScrollPosition(restorePosition);
+    return;
+  }
+
+  if (usesPageTimelineScroll()) {
+    touchPageScrollPosition = position ?? window.scrollY;
+    document.body.style.top = `-${touchPageScrollPosition}px`;
+    document.documentElement.classList.add("touch-selecting-page");
+    return;
+  }
+
+  elements.timelineScroll.classList.add("touch-selecting");
+  if (position !== null) elements.timelineScroll.scrollTop = position;
+}
+
 function renderAll() {
-  const scrollTop = elements.timelineScroll?.scrollTop || 0;
+  const scrollPosition = readTimelineScrollPosition();
   renderDate();
   renderTimelineFrame();
   renderBlocks();
   renderOverview();
   renderEventContents();
   renderDataSummary();
-  renderTonightRules();
   renderWeekStrip();
   renderRuleList();
-  if (elements.timelineScroll) elements.timelineScroll.scrollTop = scrollTop;
+  restoreTimelineScrollPosition(scrollPosition);
 }
 
 function parseScheduleTime(value, allowDayEnd = false) {
@@ -673,9 +705,9 @@ function changeVisibleRange(direction) {
   const step = viewDayCount === 7 ? 7 : viewDayCount;
   focusDateKey = addDateKeyDays(focusDateKey, direction * step);
   renderAll();
-  elements.timelineScroll.scrollTop = viewDayCount === 1 && focusDateKey === todayDateKey
+  scrollTimelineToOffset(viewDayCount === 1 && focusDateKey === todayDateKey
     ? Math.max(0, (now.getHours() * 60 + now.getMinutes() - 90) * PIXELS_PER_MINUTE)
-    : 0;
+    : 0);
 }
 
 function changeViewDayCount(dayCount) {
@@ -691,7 +723,7 @@ function goToToday() {
   clearTimelineSelection();
   focusDateKey = todayDateKey;
   renderAll();
-  elements.timelineScroll.scrollTop = Math.max(0, (now.getHours() * 60 + now.getMinutes() - 90) * PIXELS_PER_MINUTE);
+  scrollTimelineToOffset(Math.max(0, (now.getHours() * 60 + now.getMinutes() - 90) * PIXELS_PER_MINUTE));
 }
 
 function minuteAtPointer(clientY) {
@@ -773,7 +805,7 @@ function clearTimelineSelection() {
   elements.actionPicker.style.removeProperty("left");
   elements.actionPicker.style.removeProperty("top");
   elements.timeline.classList.remove("selecting");
-  elements.timelineScroll.classList.remove("touch-selecting");
+  setTouchScrollLock(false);
   showContentList();
 }
 
@@ -877,10 +909,9 @@ function clearPendingTouchSelection(clearDraft = false) {
   if (!touchSelection) return;
   clearTimeout(touchSelection.timer);
   const wasActive = touchSelection.active;
-  if (wasActive) elements.timelineScroll.scrollTop = touchSelection.scrollTop;
+  if (wasActive) setTouchScrollLock(false);
   touchSelection = null;
   elements.timeline.classList.remove("selecting");
-  elements.timelineScroll.classList.remove("touch-selecting");
   if (clearDraft && wasActive) clearTimelineSelection();
 }
 
@@ -898,7 +929,7 @@ function startTouchTimelineSelection(event) {
     dateKey: dayColumn.dataset.date,
     identifier: touch.identifier,
     origin: { x: touch.clientX, y: touch.clientY },
-    scrollTop: elements.timelineScroll.scrollTop,
+    scrollPosition: readTimelineScrollPosition(),
     timer: null,
   };
   pending.timer = setTimeout(() => {
@@ -906,7 +937,7 @@ function startTouchTimelineSelection(event) {
     pending.active = true;
     suppressContextMenuUntil = Date.now() + 1200;
     elements.timeline.classList.add("selecting");
-    elements.timelineScroll.classList.add("touch-selecting");
+    setTouchScrollLock(true, pending.scrollPosition);
     renderDraftSelection(pending.dateKey, selectionRange(pending.anchor, pending.anchor, DAY_START, DAY_END));
     if (navigator.vibrate) navigator.vibrate(8);
   }, LONG_PRESS_DELAY);
@@ -925,7 +956,7 @@ function moveTouchTimelineSelection(event) {
   }
 
   event.preventDefault();
-  elements.timelineScroll.scrollTop = touchSelection.scrollTop;
+  if (!usesPageTimelineScroll()) restoreTimelineScrollPosition(touchSelection.scrollPosition);
   renderDraftSelection(
     touchSelection.dateKey,
     selectionRange(touchSelection.anchor, minuteAtPointer(touch.clientY), DAY_START, DAY_END),
@@ -941,8 +972,7 @@ function finishTouchTimelineSelection(event) {
   if (!finished.active || !touch) return;
 
   event.preventDefault();
-  elements.timelineScroll.scrollTop = finished.scrollTop;
-  elements.timelineScroll.classList.remove("touch-selecting");
+  setTouchScrollLock(false);
   completeTimelineSelection(finished.dateKey, { x: touch.clientX, y: touch.clientY });
 }
 
@@ -1043,7 +1073,6 @@ document.querySelector("#todayButton").addEventListener("click", goToToday);
 document.querySelector("#closeActionPicker").addEventListener("click", clearTimelineSelection);
 elements.newContentButton.addEventListener("click", openContentForm);
 elements.cancelContentButton.addEventListener("click", () => showContentList(true));
-document.querySelector("#manageRulesButton").addEventListener("click", () => switchView("recurring"));
 document.querySelector("#newRuleButton").addEventListener("click", openRuleDialog);
 elements.exportDataButton.addEventListener("click", exportData);
 elements.importDataButton.addEventListener("click", () => elements.importDataFile.click());
