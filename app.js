@@ -114,7 +114,6 @@ const elements = {
   cancelLibraryContentButton: document.querySelector("#cancelLibraryContentButton"),
   nextRangeButton: document.querySelector("#nextRangeButton"),
   newContentButton: document.querySelector("#newContentButton"),
-  progressBar: document.querySelector("#progressBar"),
   previousRangeButton: document.querySelector("#previousRangeButton"),
   recurringView: document.querySelector("#recurringView"),
   ruleCount: document.querySelector("#ruleCount"),
@@ -122,7 +121,6 @@ const elements = {
   ruleError: document.querySelector("#ruleError"),
   ruleForm: document.querySelector("#ruleForm"),
   ruleList: document.querySelector("#ruleList"),
-  scheduleProgress: document.querySelector("#scheduleProgress"),
   selectedRange: document.querySelector("#selectedRange"),
   timeAxis: document.querySelector("#timeAxis"),
   timeline: document.querySelector("#timeline"),
@@ -317,17 +315,6 @@ function renderBlocks() {
   }
 }
 
-function renderOverview() {
-  const scheduled = visibleDateKeys().flatMap((dateKey) => blocksForDate(dateKey))
-    .reduce((total, block) => total + Math.max(0, block.end - block.start), 0);
-  const available = (DAY_END - DAY_START) * viewDayCount;
-  const free = Math.max(0, available - scheduled);
-  const ratio = Math.min(100, Math.round((scheduled / available) * 100));
-  elements.progressBar.style.width = `${ratio}%`;
-  elements.scheduleProgress.setAttribute("aria-valuenow", String(ratio));
-  elements.scheduleProgress.setAttribute("aria-valuetext", `已安排 ${formatDuration(scheduled)}，留白 ${formatDuration(free)}`);
-}
-
 function renderEventContents() {
   const favorites = favoriteEventContents(state.eventContents);
   elements.categoryOptions.innerHTML = eventContentCategories(state.eventContents)
@@ -444,7 +431,6 @@ function renderAll() {
   renderDate();
   renderTimelineFrame();
   renderBlocks();
-  renderOverview();
   renderEventContents();
   renderDataSummary();
   renderWeekStrip();
@@ -1179,5 +1165,4 @@ setInterval(() => {
   now = freshNow;
   const nowLine = elements.timelineDays.querySelector(`[data-date="${todayDateKey}"] .now-line`);
   if (nowLine) nowLine.style.top = `${(now.getHours() * 60 + now.getMinutes()) * PIXELS_PER_MINUTE}px`;
-  renderOverview();
 }, 60_000);

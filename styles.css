@@ -631,6 +631,7 @@ body { background: var(--bg); }
 .transfer-card small { color: var(--muted); font-size: 9px; }
 .transfer-card > button { grid-column: 2; width: fit-content; min-height: 34px; margin-top: 7px; }
 .data-note { max-width: 760px; margin: 12px 0 0; color: var(--muted); font-size: 9px; }
+.data-content-library { max-width: 760px; margin-top: 12px; }
 
 @media (max-width: 760px) {
   .content-library-card { order: 3; }
@@ -656,11 +657,6 @@ html.touch-selecting-page body {
 }
 
 @media (max-width: 760px) {
-  .planning-panel,
-  .timeline-card .card-heading {
-    display: none;
-  }
-
   .timeline-card {
     overflow: visible;
   }
@@ -671,4 +667,13 @@ html.touch-selecting-page body {
     overflow: visible;
     overscroll-behavior: auto;
   }
+}
+
+/* Every schedule viewport is reserved for the timeline. */
+.planner-layout {
+  display: block;
+}
+
+.timeline-card {
+  width: 100%;
 }

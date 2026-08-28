@@ -69,10 +69,6 @@
         <section class="view active" id="todayView" aria-labelledby="viewTitle">
           <div class="planner-layout">
             <section class="timeline-card" aria-label="日程时间轴">
-              <div class="card-heading">
-                <div class="progress-track" id="scheduleProgress" role="progressbar" aria-label="当前范围已安排比例" aria-valuemin="0" aria-valuemax="100"><span id="progressBar"></span></div>
-              </div>
-
               <div class="timeline-scroll" id="timelineScroll">
                 <div class="timeline-headers" id="timelineHeaders"></div>
                 <div class="timeline" id="timeline">
@@ -82,16 +78,6 @@
               </div>
 
             </section>
-
-            <aside class="planning-panel">
-              <section class="panel-card content-library-card" aria-labelledby="contentLibraryTitle">
-                <div class="panel-heading compact">
-                  <svg class="panel-heading-icon" aria-hidden="true"><use href="#icon-library"></use></svg>
-                  <h2 id="contentLibraryTitle">常用项</h2>
-                </div>
-                <div class="content-library-list" id="eventContentLibrary"></div>
-              </section>
-            </aside>
           </div>
         </section>
 
@@ -123,6 +109,13 @@
             </article>
           </div>
           <p class="data-note">导入会替换当前浏览器中的时间块、重复日程和事件内容。</p>
+          <section class="panel-card content-library-card data-content-library" aria-labelledby="contentLibraryTitle">
+            <div class="panel-heading compact">
+              <svg class="panel-heading-icon" aria-hidden="true"><use href="#icon-library"></use></svg>
+              <h2 id="contentLibraryTitle">常用项</h2>
+            </div>
+            <div class="content-library-list" id="eventContentLibrary"></div>
+          </section>
         </section>
       </main>
     </div>
