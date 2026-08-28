@@ -23,6 +23,7 @@ import {
   visibleDateKeys as buildVisibleDateKeys,
 } from "./src/calendar.js";
 import { hasMovedBeyondTolerance } from "./src/gesture.js";
+import { createBackup, parseBackup } from "./src/backup.js";
 
 const DAY_START = 0;
 const DAY_END = 24 * 60;
@@ -91,9 +92,15 @@ const elements = {
   contentListView: document.querySelector("#contentListView"),
   contentTitle: document.querySelector("#contentTitle"),
   categoryOptions: document.querySelector("#categoryOptions"),
+  dataSummary: document.querySelector("#dataSummary"),
+  dataView: document.querySelector("#dataView"),
   dateEyebrow: document.querySelector("#dateEyebrow"),
   dayOptions: document.querySelector("#dayOptions"),
   deleteBlockButton: document.querySelector("#deleteBlockButton"),
+  eventContentLibrary: document.querySelector("#eventContentLibrary"),
+  exportDataButton: document.querySelector("#exportDataButton"),
+  importDataButton: document.querySelector("#importDataButton"),
+  importDataFile: document.querySelector("#importDataFile"),
   nextRangeButton: document.querySelector("#nextRangeButton"),
   newContentButton: document.querySelector("#newContentButton"),
   progressBar: document.querySelector("#progressBar"),
@@ -112,6 +119,7 @@ const elements = {
   timelineHeaders: document.querySelector("#timelineHeaders"),
   timelineScroll: document.querySelector("#timelineScroll"),
   toast: document.querySelector("#toast"),
+  topbar: document.querySelector("#topbar"),
   tonightRules: document.querySelector("#tonightRules"),
   todayView: document.querySelector("#todayView"),
   viewTitle: document.querySelector("#viewTitle"),
@@ -170,6 +178,10 @@ function showToast(message) {
   elements.toast.querySelector("span").textContent = message;
   elements.toast.classList.add("show");
   toastTimer = setTimeout(() => elements.toast.classList.remove("show"), 2600);
+}
+
+function safeColor(color, fallback = "apricot") {
+  return COLORS.includes(color) ? color : fallback;
 }
 
 function visibleDateKeys() {
@@ -312,12 +324,29 @@ function renderEventContents() {
     .map((category) => `<option value="${escapeHtml(category)}"></option>`)
     .join("");
   elements.actionOptions.innerHTML = favorites.length
-    ? favorites.map((content) => `<button data-event-content-id="${content.id}" style="--action-color:var(--${content.color || "apricot"})">
+    ? favorites.map((content) => `<button data-event-content-id="${escapeHtml(content.id)}" style="--action-color:var(--${safeColor(content.color)})">
         <span class="action-dot"></span>
         <span class="action-copy"><strong>${escapeHtml(content.title)}</strong>${content.category ? `<small>${escapeHtml(content.category)}</small>` : ""}</span>
         <svg><use href="#icon-arrow"></use></svg>
       </button>`).join("")
     : '<p class="empty-content">暂无常用内容</p>';
+
+  const contents = [...state.eventContents].sort((left, right) => (
+    Number(right.favorite === true) - Number(left.favorite === true)
+    || left.title.localeCompare(right.title, "zh-CN")
+  ));
+  elements.eventContentLibrary.innerHTML = contents.length
+    ? contents.map((content) => `<div class="content-library-item">
+        <i class="${safeColor(content.color)}" aria-hidden="true"></i>
+        <strong>${escapeHtml(content.title)}</strong>
+        <small>${escapeHtml(content.category || "未分类")}</small>
+      </div>`).join("")
+    : '<p class="empty-content">暂无事件内容</p>';
+}
+
+function renderDataSummary() {
+  const categoryCount = eventContentCategories(state.eventContents).length;
+  elements.dataSummary.textContent = `${state.eventContents.length} 内容 · ${categoryCount} 分类 · ${state.rules.length} 规则`;
 }
 
 function renderTonightRules() {
@@ -333,7 +362,7 @@ function renderTonightRules() {
     return `<div class="mini-rule" style="--rule-color:${COLOR_VALUES[rule.color]}">
       <span class="mini-rule-dot"></span>
       <span><strong>${escapeHtml(rule.title)}</strong><small>${formatTime(rule.start)} · ${formatDuration(rule.duration)}</small></span>
-      <button data-apply-rule="${rule.id}" aria-label="${added ? "已安排" : `将${escapeHtml(rule.title)}加入该日`}" ${added ? "disabled" : ""}><svg><use href="#icon-${added ? "check" : "plus"}"></use></svg></button>
+      <button data-apply-rule="${escapeHtml(rule.id)}" aria-label="${added ? "已安排" : `将${escapeHtml(rule.title)}加入该日`}" ${added ? "disabled" : ""}><svg><use href="#icon-${added ? "check" : "plus"}"></use></svg></button>
     </div>`;
   }).join("");
 }
@@ -364,8 +393,8 @@ function renderRuleList() {
       <span class="rule-color"></span>
       <div class="rule-main"><strong>${escapeHtml(rule.title)}</strong><span class="rule-meta"><svg><use href="#icon-clock"></use></svg>${formatTime(rule.start)} · ${formatDuration(rule.duration)}</span></div>
       <div class="day-chips" aria-label="重复日期">${DAY_ORDER.map((day) => `<span class="${rule.days.includes(day) ? "on" : ""}">${DAY_NAMES[day]}</span>`).join("")}</div>
-      <button class="rule-add" data-apply-rule="${rule.id}" aria-label="${added ? "该日已安排" : `将${escapeHtml(rule.title)}加入该日`}" ${added || !rule.enabled ? "disabled" : ""}><svg><use href="#icon-${added ? "check" : "plus"}"></use></svg></button>
-      <label class="switch" aria-label="${rule.enabled ? "停用" : "启用"}${escapeHtml(rule.title)}"><input type="checkbox" data-toggle-rule="${rule.id}" ${rule.enabled ? "checked" : ""} /><span></span></label>
+      <button class="rule-add" data-apply-rule="${escapeHtml(rule.id)}" aria-label="${added ? "该日已安排" : `将${escapeHtml(rule.title)}加入该日`}" ${added || !rule.enabled ? "disabled" : ""}><svg><use href="#icon-${added ? "check" : "plus"}"></use></svg></button>
+      <label class="switch" aria-label="${rule.enabled ? "停用" : "启用"}${escapeHtml(rule.title)}"><input type="checkbox" data-toggle-rule="${escapeHtml(rule.id)}" ${rule.enabled ? "checked" : ""} /><span></span></label>
     </article>`;
   }).join("");
 }
@@ -377,6 +406,7 @@ function renderAll() {
   renderBlocks();
   renderOverview();
   renderEventContents();
+  renderDataSummary();
   renderTonightRules();
   renderWeekStrip();
   renderRuleList();
@@ -574,15 +604,65 @@ function toggleRule(ruleId, enabled) {
   showToast(enabled ? "重复日程已启用" : "重复日程已暂停");
 }
 
+function exportData() {
+  const backup = createBackup(state);
+  const blob = new Blob([`${JSON.stringify(backup, null, 2)}\n`], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `timeblock-${todayDateKey}.json`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  showToast("JSON 备份已导出");
+}
+
+async function importData(event) {
+  const file = event.target.files?.[0];
+  event.target.value = "";
+  if (!file) return;
+  if (file.size > 2 * 1024 * 1024) {
+    showToast("备份文件不能超过 2 MB");
+    return;
+  }
+
+  let importedState;
+  try {
+    importedState = parseBackup(await file.text());
+  } catch (error) {
+    showToast(error instanceof Error ? error.message : "无法读取备份文件");
+    return;
+  }
+  if (!window.confirm("导入会替换当前浏览器中的全部 Timeblock 数据，是否继续？")) return;
+
+  clearTimelineSelection();
+  state = importedState;
+  viewDayCount = importedState.viewDayCount;
+  focusDateKey = todayDateKey;
+  saveState();
+  renderAll();
+  switchView("data");
+  showToast("数据已导入");
+}
+
 function switchView(viewName) {
+  const views = {
+    today: elements.todayView,
+    recurring: elements.recurringView,
+    data: elements.dataView,
+  };
+  if (!views[viewName]) viewName = "today";
   const isToday = viewName === "today";
   if (!isToday) clearTimelineSelection();
-  elements.todayView.classList.toggle("active", isToday);
-  elements.todayView.hidden = !isToday;
-  elements.recurringView.classList.toggle("active", !isToday);
-  elements.recurringView.hidden = isToday;
+  Object.entries(views).forEach(([name, view]) => {
+    const active = name === viewName;
+    view.classList.toggle("active", active);
+    view.hidden = !active;
+  });
   document.querySelectorAll("[data-view]").forEach((button) => button.classList.toggle("active", button.dataset.view === viewName));
-  elements.viewTitle.textContent = isToday ? "日程" : "重复";
+  elements.viewTitle.textContent = { today: "日程", recurring: "重复", data: "数据" }[viewName];
+  elements.topbar.hidden = !isToday;
   elements.clearDoneButton.hidden = !isToday;
   window.location.hash = viewName;
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -870,15 +950,6 @@ function cancelTouchTimelineSelection() {
   clearPendingTouchSelection(true);
 }
 
-function guideToTimeline() {
-  switchView("today");
-  document.querySelector(".timeline-card").scrollIntoView({ behavior: "smooth", block: "start" });
-  elements.timeline.classList.remove("selection-ready");
-  requestAnimationFrame(() => elements.timeline.classList.add("selection-ready"));
-  setTimeout(() => elements.timeline.classList.remove("selection-ready"), 900);
-  showToast("在空白时间上按住，并上下滑动");
-}
-
 function startPointerAdjustment(event) {
   if (event.button !== 0 || event.target.closest("button")) return;
   const article = event.currentTarget;
@@ -969,12 +1040,14 @@ document.querySelectorAll("[data-view-days]").forEach((button) => button.addEven
 elements.previousRangeButton.addEventListener("click", () => changeVisibleRange(-1));
 elements.nextRangeButton.addEventListener("click", () => changeVisibleRange(1));
 document.querySelector("#todayButton").addEventListener("click", goToToday);
-document.querySelector("#mobileAddButton").addEventListener("click", guideToTimeline);
 document.querySelector("#closeActionPicker").addEventListener("click", clearTimelineSelection);
 elements.newContentButton.addEventListener("click", openContentForm);
 elements.cancelContentButton.addEventListener("click", () => showContentList(true));
 document.querySelector("#manageRulesButton").addEventListener("click", () => switchView("recurring"));
 document.querySelector("#newRuleButton").addEventListener("click", openRuleDialog);
+elements.exportDataButton.addEventListener("click", exportData);
+elements.importDataButton.addEventListener("click", () => elements.importDataFile.click());
+elements.importDataFile.addEventListener("change", importData);
 elements.contentForm.addEventListener("submit", saveEventContent);
 elements.blockForm.addEventListener("submit", saveBlock);
 elements.deleteBlockButton.addEventListener("click", deleteBlock);
@@ -1000,11 +1073,16 @@ elements.timeline.addEventListener("contextmenu", (event) => {
   if (Date.now() < suppressContextMenuUntil && event.target.closest(".day-column")) event.preventDefault();
 });
 window.addEventListener("resize", positionActionPicker);
+window.addEventListener("hashchange", () => {
+  const viewName = window.location.hash.slice(1);
+  if (["today", "recurring", "data"].includes(viewName)) switchView(viewName);
+});
 
 buildDayOptions();
 renderAll();
 goToToday();
-if (window.location.hash === "#recurring") switchView("recurring");
+const initialView = window.location.hash.slice(1);
+if (["recurring", "data"].includes(initialView)) switchView(initialView);
 setInterval(() => {
   const freshNow = new Date();
   if (toDateKey(freshNow) !== todayDateKey) {

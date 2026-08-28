@@ -11,12 +11,13 @@
 
 - 零依赖响应式 Web 原型，使用原生 HTML、CSS 和 ECMAScript modules
 - `index.html` / `styles.css` / `app.js`：页面结构、视觉与交互状态
-- `src/schedule.js`：时间解析、冲突检测、空档与重复规则；`src/calendar.js`：日期范围和旧数据迁移；`src/content.js`：事件内容、分类与常用列表逻辑；`src/gesture.js`：长按手势的移动容差
+- `src/schedule.js`：时间解析、冲突检测、空档与重复规则；`src/calendar.js`：日期范围和旧数据迁移；`src/content.js`：事件内容、分类与常用列表逻辑；`src/gesture.js`：长按手势；`src/backup.js`：版本化 JSON 备份校验
 - `test/`：Node.js 原生测试；`scripts/serve.mjs`：本地静态服务器
 - 时间在领域层统一表示为当天分钟数，时间轴覆盖 00:00–24:00；支持 1 日、连续 3 日和周一开始的 7 日视图
 - 时间块按日期保存在 `blocksByDate`，与重复规则、事件内容库和视图偏好一同写入浏览器 `localStorage` 的 `timeblock-state-v1`；旧单日 `blocks` 自动迁移
 - 常驻界面采用文字最少化约定：只显示日期、时间、行动与必要数据，图标按钮必须保留可访问名称
 - 移动端时间轴默认允许整列纵向滚动；在空白格保持长按后才进入划选，手指先移动则取消长按并继续原生滚动
+- 日程侧栏展示全部事件内容与分类；“数据”页可导出完整状态，并在确认后从 JSON 备份或原始状态导入
 - `.github/workflows/static.yml`：推送 `main` 后自动发布到 GitHub Pages
 
 ## 开发命令
