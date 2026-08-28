@@ -87,7 +87,7 @@
               <section class="panel-card content-library-card" aria-labelledby="contentLibraryTitle">
                 <div class="panel-heading compact">
                   <svg class="panel-heading-icon" aria-hidden="true"><use href="#icon-library"></use></svg>
-                  <h2 id="contentLibraryTitle">事件内容</h2>
+                  <h2 id="contentLibraryTitle">常用项</h2>
                 </div>
                 <div class="content-library-list" id="eventContentLibrary"></div>
               </section>
@@ -161,6 +161,24 @@
     </div>
 
     <datalist id="categoryOptions"></datalist>
+
+    <dialog id="libraryContentDialog" class="sheet-dialog">
+      <form method="dialog" id="libraryContentForm">
+        <div class="dialog-heading"><div><span class="section-kicker">事件内容</span><h2>编辑常用项</h2></div><button type="button" class="close-button" id="closeLibraryContentButton" aria-label="关闭">×</button></div>
+        <input type="hidden" id="libraryContentId" />
+        <label class="field"><span>名称</span><input id="libraryContentTitle" required maxlength="40" autocomplete="off" /></label>
+        <label class="field"><span>分类（可选）</span><input id="libraryContentCategory" list="categoryOptions" maxlength="20" autocomplete="off" /></label>
+        <fieldset class="color-field"><legend>颜色</legend><div class="color-options">
+          <label><input type="radio" name="libraryContentColor" value="apricot" checked /><span class="apricot"></span></label>
+          <label><input type="radio" name="libraryContentColor" value="sage" /><span class="sage"></span></label>
+          <label><input type="radio" name="libraryContentColor" value="blue" /><span class="blue"></span></label>
+          <label><input type="radio" name="libraryContentColor" value="lilac" /><span class="lilac"></span></label>
+        </div></fieldset>
+        <label class="favorite-choice library-favorite-choice"><input id="libraryContentFavorite" type="checkbox" /><span>保留为常用</span></label>
+        <div class="dialog-error" id="libraryContentError" role="alert"></div>
+        <div class="dialog-actions end"><button type="button" class="secondary-button" id="cancelLibraryContentButton">取消</button><button type="submit" class="primary-button">保存</button></div>
+      </form>
+    </dialog>
 
     <dialog id="blockDialog" class="sheet-dialog">
       <form method="dialog" id="blockForm">

@@ -48,3 +48,29 @@ export function upsertEventContent(contents, draft) {
   };
   return { content, contents: [...contents, content], created: true };
 }
+
+export function updateEventContent(contents, id, draft) {
+  const contentIndex = contents.findIndex((content) => content.id === id);
+  const title = cleanText(draft.title);
+  if (contentIndex < 0 || !title) return null;
+
+  const category = cleanText(draft.category) || null;
+  const duplicate = contents.some((content, index) => (
+    index !== contentIndex
+    && cleanText(content.title).toLocaleLowerCase() === title.toLocaleLowerCase()
+    && (cleanText(content.category) || null) === category
+  ));
+  if (duplicate) return null;
+
+  const content = {
+    ...contents[contentIndex],
+    title,
+    category,
+    favorite: draft.favorite === true,
+    color: draft.color || contents[contentIndex].color,
+  };
+  return {
+    content,
+    contents: contents.map((item, index) => index === contentIndex ? content : item),
+  };
+}

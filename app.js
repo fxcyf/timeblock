@@ -14,6 +14,7 @@ import {
   colorForEventContent,
   eventContentCategories,
   favoriteEventContents,
+  updateEventContent,
   upsertEventContent,
 } from "./src/content.js";
 import {
@@ -102,6 +103,15 @@ const elements = {
   exportDataButton: document.querySelector("#exportDataButton"),
   importDataButton: document.querySelector("#importDataButton"),
   importDataFile: document.querySelector("#importDataFile"),
+  libraryContentCategory: document.querySelector("#libraryContentCategory"),
+  libraryContentDialog: document.querySelector("#libraryContentDialog"),
+  libraryContentError: document.querySelector("#libraryContentError"),
+  libraryContentFavorite: document.querySelector("#libraryContentFavorite"),
+  libraryContentForm: document.querySelector("#libraryContentForm"),
+  libraryContentId: document.querySelector("#libraryContentId"),
+  libraryContentTitle: document.querySelector("#libraryContentTitle"),
+  closeLibraryContentButton: document.querySelector("#closeLibraryContentButton"),
+  cancelLibraryContentButton: document.querySelector("#cancelLibraryContentButton"),
   nextRangeButton: document.querySelector("#nextRangeButton"),
   newContentButton: document.querySelector("#newContentButton"),
   progressBar: document.querySelector("#progressBar"),
@@ -331,17 +341,14 @@ function renderEventContents() {
       </button>`).join("")
     : '<p class="empty-content">暂无常用内容</p>';
 
-  const contents = [...state.eventContents].sort((left, right) => (
-    Number(right.favorite === true) - Number(left.favorite === true)
-    || left.title.localeCompare(right.title, "zh-CN")
-  ));
+  const contents = [...favorites].sort((left, right) => left.title.localeCompare(right.title, "zh-CN"));
   elements.eventContentLibrary.innerHTML = contents.length
-    ? contents.map((content) => `<div class="content-library-item">
+    ? contents.map((content) => `<button type="button" class="content-library-item" data-edit-event-content="${escapeHtml(content.id)}" aria-label="编辑${escapeHtml(content.title)}${content.category ? `，分类${escapeHtml(content.category)}` : "，未分类"}">
         <i class="${safeColor(content.color)}" aria-hidden="true"></i>
         <strong>${escapeHtml(content.title)}</strong>
         <small>${escapeHtml(content.category || "未分类")}</small>
-      </div>`).join("")
-    : '<p class="empty-content">暂无事件内容</p>';
+      </button>`).join("")
+    : '<p class="empty-content">暂无常用内容</p>';
 }
 
 function renderDataSummary() {
@@ -856,6 +863,49 @@ function saveEventContent(event) {
   createBlockFromContent(result.content);
 }
 
+function openLibraryContentEditor(contentId) {
+  const content = state.eventContents.find((item) => item.id === contentId && item.favorite === true);
+  if (!content) return;
+  elements.libraryContentForm.reset();
+  elements.libraryContentError.textContent = "";
+  elements.libraryContentId.value = content.id;
+  elements.libraryContentTitle.value = content.title;
+  elements.libraryContentCategory.value = content.category || "";
+  elements.libraryContentFavorite.checked = true;
+  const colorRadio = elements.libraryContentForm.querySelector(`[name="libraryContentColor"][value="${safeColor(content.color)}"]`);
+  if (colorRadio) colorRadio.checked = true;
+  elements.libraryContentDialog.showModal();
+  elements.libraryContentTitle.focus();
+}
+
+function saveLibraryContent(event) {
+  event.preventDefault();
+  const title = elements.libraryContentTitle.value.trim();
+  if (!title) {
+    elements.libraryContentError.textContent = "请填写事件内容。";
+    elements.libraryContentTitle.focus();
+    return;
+  }
+
+  const result = updateEventContent(state.eventContents, elements.libraryContentId.value, {
+    title,
+    category: elements.libraryContentCategory.value,
+    favorite: elements.libraryContentFavorite.checked,
+    color: new FormData(elements.libraryContentForm).get("libraryContentColor"),
+  });
+  if (!result) {
+    elements.libraryContentError.textContent = "已有同名且同分类的事件内容。";
+    return;
+  }
+
+  state.eventContents = result.contents;
+  saveState();
+  renderEventContents();
+  renderDataSummary();
+  elements.libraryContentDialog.close();
+  showToast(result.content.favorite ? "常用项已更新" : "已移出常用项");
+}
+
 function completeTimelineSelection(dateKey, point) {
   elements.timeline.classList.remove("selecting");
   if (!activeSelection) return;
@@ -1041,6 +1091,11 @@ function startPointerAdjustment(event) {
 }
 
 document.addEventListener("click", (event) => {
+  const editContentButton = event.target.closest("[data-edit-event-content]");
+  if (editContentButton) {
+    openLibraryContentEditor(editContentButton.dataset.editEventContent);
+    return;
+  }
   const contentButton = event.target.closest("[data-event-content-id]");
   if (contentButton) {
     const content = state.eventContents.find((item) => item.id === contentButton.dataset.eventContentId);
@@ -1078,6 +1133,9 @@ elements.exportDataButton.addEventListener("click", exportData);
 elements.importDataButton.addEventListener("click", () => elements.importDataFile.click());
 elements.importDataFile.addEventListener("change", importData);
 elements.contentForm.addEventListener("submit", saveEventContent);
+elements.libraryContentForm.addEventListener("submit", saveLibraryContent);
+elements.closeLibraryContentButton.addEventListener("click", () => elements.libraryContentDialog.close());
+elements.cancelLibraryContentButton.addEventListener("click", () => elements.libraryContentDialog.close());
 elements.blockForm.addEventListener("submit", saveBlock);
 elements.deleteBlockButton.addEventListener("click", deleteBlock);
 elements.ruleForm.addEventListener("submit", saveRule);
