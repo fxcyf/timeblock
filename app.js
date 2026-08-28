@@ -16,10 +16,16 @@ import {
   favoriteEventContents,
   upsertEventContent,
 } from "./src/content.js";
+import {
+  addDateKeyDays,
+  dateFromKey,
+  migrateBlocksByDate,
+  visibleDateKeys as buildVisibleDateKeys,
+} from "./src/calendar.js";
 
-const DAY_START = 18 * 60 + 30;
-const DAY_END = 23 * 60 + 30;
-const PIXELS_PER_MINUTE = 2;
+const DAY_START = 0;
+const DAY_END = 24 * 60;
+const PIXELS_PER_MINUTE = 1.2;
 const DEFAULT_BLOCK_DURATION = 45;
 const STORAGE_KEY = "timeblock-state-v1";
 const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
@@ -47,8 +53,10 @@ const defaultEventContents = [
 ];
 
 let now = new Date();
-const dateKey = toDateKey(now);
+const todayDateKey = toDateKey(now);
 let state = loadState();
+let focusDateKey = todayDateKey;
+let viewDayCount = [1, 3, 7].includes(state.viewDayCount) ? state.viewDayCount : 1;
 let toastTimer;
 let ignoreBlockClickUntil = 0;
 let activeSelection = null;
@@ -58,6 +66,7 @@ const elements = {
   actionOptions: document.querySelector("#actionOptions"),
   actionPicker: document.querySelector("#actionPicker"),
   blockCategory: document.querySelector("#blockCategory"),
+  blockDate: document.querySelector("#blockDate"),
   blockDialog: document.querySelector("#blockDialog"),
   blockDialogKicker: document.querySelector("#blockDialogKicker"),
   blockDialogTitle: document.querySelector("#blockDialogTitle"),
@@ -65,9 +74,9 @@ const elements = {
   blockError: document.querySelector("#blockError"),
   blockForm: document.querySelector("#blockForm"),
   blockId: document.querySelector("#blockId"),
+  blockOriginalDate: document.querySelector("#blockOriginalDate"),
   blockStart: document.querySelector("#blockStart"),
   blockTitle: document.querySelector("#blockTitle"),
-  blocksLayer: document.querySelector("#blocksLayer"),
   cancelContentButton: document.querySelector("#cancelContentButton"),
   clearDoneButton: document.querySelector("#clearDoneButton"),
   contentCategory: document.querySelector("#contentCategory"),
@@ -80,10 +89,10 @@ const elements = {
   dateEyebrow: document.querySelector("#dateEyebrow"),
   dayOptions: document.querySelector("#dayOptions"),
   deleteBlockButton: document.querySelector("#deleteBlockButton"),
-  draftSelection: document.querySelector("#draftSelection"),
-  nowLine: document.querySelector("#nowLine"),
+  nextRangeButton: document.querySelector("#nextRangeButton"),
   newContentButton: document.querySelector("#newContentButton"),
   progressBar: document.querySelector("#progressBar"),
+  previousRangeButton: document.querySelector("#previousRangeButton"),
   recurringView: document.querySelector("#recurringView"),
   ruleCount: document.querySelector("#ruleCount"),
   ruleDialog: document.querySelector("#ruleDialog"),
@@ -92,10 +101,11 @@ const elements = {
   ruleList: document.querySelector("#ruleList"),
   scheduleProgress: document.querySelector("#scheduleProgress"),
   selectedRange: document.querySelector("#selectedRange"),
-  selectionTime: document.querySelector("#selectionTime"),
   timeAxis: document.querySelector("#timeAxis"),
   timeline: document.querySelector("#timeline"),
-  timelineGrid: document.querySelector("#timelineGrid"),
+  timelineDays: document.querySelector("#timelineDays"),
+  timelineHeaders: document.querySelector("#timelineHeaders"),
+  timelineScroll: document.querySelector("#timelineScroll"),
   toast: document.querySelector("#toast"),
   tonightRules: document.querySelector("#tonightRules"),
   todayView: document.querySelector("#todayView"),
@@ -110,17 +120,12 @@ function toDateKey(date) {
   return `${year}-${month}-${day}`;
 }
 
-function seedBlocks(rules) {
-  const recurringBlocks = materializeRecurring(rules, now);
-  const windDown = {
-    id: `block-wind-down-${dateKey}`,
-    title: "洗澡 & 准备明天",
-    start: 22 * 60 + 10,
-    end: 22 * 60 + 40,
-    color: "lilac",
-    done: false,
-  };
-  return hasConflict(windDown, recurringBlocks) ? recurringBlocks : [...recurringBlocks, windDown];
+function dateForSchedule(dateKey) {
+  return new Date(`${dateKey}T12:00:00`);
+}
+
+function seedBlocks(rules, dateKey) {
+  return materializeRecurring(rules, dateForSchedule(dateKey));
 }
 
 function loadState() {
@@ -133,10 +138,9 @@ function loadState() {
 
   const rules = Array.isArray(saved?.rules) ? saved.rules : defaultRules;
   const eventContents = Array.isArray(saved?.eventContents) ? saved.eventContents : defaultEventContents;
-  if (saved?.date === dateKey && Array.isArray(saved.blocks)) {
-    return { date: dateKey, rules, blocks: saved.blocks, eventContents };
-  }
-  return { date: dateKey, rules, blocks: seedBlocks(rules), eventContents };
+  const blocksByDate = migrateBlocksByDate(saved);
+  if (!Object.hasOwn(blocksByDate, todayDateKey)) blocksByDate[todayDateKey] = seedBlocks(rules, todayDateKey);
+  return { rules, eventContents, blocksByDate, viewDayCount: saved?.viewDayCount };
 }
 
 function saveState() {
@@ -163,84 +167,133 @@ function showToast(message) {
   toastTimer = setTimeout(() => elements.toast.classList.remove("show"), 2600);
 }
 
+function visibleDateKeys() {
+  return buildVisibleDateKeys(focusDateKey, viewDayCount);
+}
+
+function blocksForDate(dateKey) {
+  if (!Object.hasOwn(state.blocksByDate, dateKey)) state.blocksByDate[dateKey] = seedBlocks(state.rules, dateKey);
+  return state.blocksByDate[dateKey];
+}
+
+function setBlocksForDate(dateKey, blocks) {
+  state.blocksByDate[dateKey] = blocks;
+}
+
+function dateParts(dateKey) {
+  const date = dateFromKey(dateKey);
+  return {
+    day: date.getUTCDate(),
+    month: date.getUTCMonth() + 1,
+    weekday: date.getUTCDay(),
+    year: date.getUTCFullYear(),
+  };
+}
+
 function renderDate() {
-  const month = now.getMonth() + 1;
-  const date = now.getDate();
-  elements.dateEyebrow.textContent = `${month}月${date}日 · ${FULL_DAY_NAMES[now.getDay()]}`;
+  const keys = visibleDateKeys();
+  const first = dateParts(keys[0]);
+  const last = dateParts(keys.at(-1));
+  elements.dateEyebrow.textContent = keys.length === 1
+    ? `${first.month}月${first.day}日 · ${FULL_DAY_NAMES[first.weekday]}`
+    : first.month === last.month
+      ? `${first.month}月${first.day}—${last.day}日`
+      : `${first.month}月${first.day}日—${last.month}月${last.day}日`;
+  document.querySelectorAll("[data-view-days]").forEach((button) => {
+    button.classList.toggle("active", Number(button.dataset.viewDays) === viewDayCount);
+  });
 }
 
 function renderTimelineFrame() {
   const totalMinutes = DAY_END - DAY_START;
+  const keys = visibleDateKeys();
   elements.timeline.style.height = `${totalMinutes * PIXELS_PER_MINUTE}px`;
+  elements.timeline.className = `timeline timeline-view-${viewDayCount}`;
+  elements.timeline.style.setProperty("--view-days", String(viewDayCount));
   elements.timeAxis.innerHTML = "";
-  elements.timelineGrid.innerHTML = "";
+  elements.timelineHeaders.style.setProperty("--view-days", String(viewDayCount));
+  elements.timelineHeaders.innerHTML = `<span class="header-axis"></span>${keys.map((dateKey) => {
+    const parts = dateParts(dateKey);
+    return `<div class="day-header${dateKey === todayDateKey ? " today" : ""}"><span>${DAY_NAMES[parts.weekday]}</span><strong>${parts.day}</strong></div>`;
+  }).join("")}`;
 
-  for (let minute = DAY_START; minute <= DAY_END; minute += 30) {
+  for (let minute = DAY_START; minute <= DAY_END; minute += 60) {
     const offset = (minute - DAY_START) * PIXELS_PER_MINUTE;
     const label = document.createElement("span");
     label.className = "axis-label";
     if (minute === DAY_START) label.classList.add("edge-start");
     if (minute === DAY_END) label.classList.add("edge-end");
     label.style.top = `${offset}px`;
-    label.textContent = minute % 60 === 0 || minute === DAY_START || minute === DAY_END ? formatTime(minute) : "· 30";
+    label.textContent = minute === DAY_END ? "24:00" : formatTime(minute);
     elements.timeAxis.append(label);
-
-    const line = document.createElement("span");
-    line.className = `grid-line${minute % 60 ? " half" : ""}`;
-    line.style.top = `${offset}px`;
-    elements.timelineGrid.append(line);
   }
+
+  elements.timelineDays.innerHTML = keys.map((dateKey) => {
+    const lines = [];
+    for (let minute = DAY_START; minute <= DAY_END; minute += 30) {
+      lines.push(`<span class="grid-line${minute % 60 ? " half" : ""}" style="top:${minute * PIXELS_PER_MINUTE}px"></span>`);
+    }
+    return `<section class="day-column" data-date="${dateKey}" aria-label="${dateKey}">
+      <div class="day-grid">${lines.join("")}</div>
+      <div class="now-line" ${dateKey === todayDateKey ? "" : "hidden"}><span class="sr-only">现在</span></div>
+      <div class="blocks-layer" data-date="${dateKey}"></div>
+      <div class="draft-selection" hidden aria-live="polite"><span class="selection-time"></span></div>
+    </section>`;
+  }).join("");
 
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
-  if (currentMinutes >= DAY_START && currentMinutes <= DAY_END) {
-    elements.nowLine.hidden = false;
-    elements.nowLine.style.top = `${(currentMinutes - DAY_START) * PIXELS_PER_MINUTE}px`;
-  } else {
-    elements.nowLine.hidden = true;
-  }
+  const nowLine = elements.timelineDays.querySelector(`[data-date="${todayDateKey}"] .now-line`);
+  if (nowLine) nowLine.style.top = `${currentMinutes * PIXELS_PER_MINUTE}px`;
 }
 
 function renderBlocks() {
-  elements.blocksLayer.innerHTML = "";
-  for (const block of sortBlocks(state.blocks)) {
-    if (block.end <= DAY_START || block.start >= DAY_END) continue;
-    const article = document.createElement("article");
-    article.className = `time-block ${block.color || "apricot"}${block.done ? " done" : ""}`;
-    article.dataset.id = block.id;
-    article.style.top = `${(block.start - DAY_START) * PIXELS_PER_MINUTE}px`;
-    article.style.height = `${(block.end - block.start) * PIXELS_PER_MINUTE}px`;
-    article.setAttribute("tabindex", "0");
-    article.setAttribute("role", "button");
-    article.setAttribute("aria-label", `${block.category ? `${block.category}，` : ""}${block.title}，${formatTime(block.start)} 到 ${formatTime(block.end)}，点击编辑`);
-    article.innerHTML = `
-      <span class="block-meta"><span class="block-time">${formatTime(block.start)} — ${formatTime(block.end)}</span>${block.category ? `<span class="block-category">${escapeHtml(block.category)}</span>` : ""}</span>
-      <strong class="block-title">${escapeHtml(block.title)}</strong>
-      <button class="block-check" aria-label="${block.done ? "标记为未完成" : "标记为已完成"}"><svg><use href="#icon-check"></use></svg></button>
-      <span class="resize-handle" aria-hidden="true"></span>
-    `;
-    article.addEventListener("click", (event) => {
-      if (Date.now() < ignoreBlockClickUntil || event.target.closest(".block-check")) return;
-      openBlockDialog(block.id);
-    });
-    article.addEventListener("keydown", (event) => {
-      if (event.target !== article) return;
-      if (event.key === "Enter" || event.key === " ") {
-        event.preventDefault();
-        openBlockDialog(block.id);
-      }
-    });
-    article.querySelector(".block-check").addEventListener("click", (event) => {
-      event.stopPropagation();
-      toggleDone(block.id);
-    });
-    article.addEventListener("pointerdown", startPointerAdjustment);
-    elements.blocksLayer.append(article);
+  for (const dateKey of visibleDateKeys()) {
+    const layer = elements.timelineDays.querySelector(`.blocks-layer[data-date="${dateKey}"]`);
+    if (!layer) continue;
+    layer.innerHTML = "";
+    for (const block of sortBlocks(blocksForDate(dateKey))) {
+      if (block.end <= DAY_START || block.start >= DAY_END) continue;
+      const article = document.createElement("article");
+      const compact = block.end - block.start <= 30 ? " compact" : "";
+      article.className = `time-block ${block.color || "apricot"}${block.done ? " done" : ""}${compact}`;
+      article.dataset.id = block.id;
+      article.dataset.date = dateKey;
+      article.style.top = `${block.start * PIXELS_PER_MINUTE}px`;
+      article.style.height = `${(block.end - block.start) * PIXELS_PER_MINUTE}px`;
+      article.setAttribute("tabindex", "0");
+      article.setAttribute("role", "button");
+      article.setAttribute("aria-label", `${block.category ? `${block.category}，` : ""}${block.title}，${dateKey} ${formatTime(block.start)} 到 ${formatTime(block.end)}，点击编辑`);
+      article.innerHTML = `
+        <span class="block-meta"><span class="block-time">${formatTime(block.start)} — ${formatTime(block.end)}</span>${block.category ? `<span class="block-category">${escapeHtml(block.category)}</span>` : ""}</span>
+        <strong class="block-title">${escapeHtml(block.title)}</strong>
+        <button class="block-check" aria-label="${block.done ? "标记为未完成" : "标记为已完成"}"><svg><use href="#icon-check"></use></svg></button>
+        <span class="resize-handle" aria-hidden="true"></span>
+      `;
+      article.addEventListener("click", (event) => {
+        if (Date.now() < ignoreBlockClickUntil || event.target.closest(".block-check")) return;
+        openBlockDialog(block.id, dateKey);
+      });
+      article.addEventListener("keydown", (event) => {
+        if (event.target !== article) return;
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openBlockDialog(block.id, dateKey);
+        }
+      });
+      article.querySelector(".block-check").addEventListener("click", (event) => {
+        event.stopPropagation();
+        toggleDone(block.id, dateKey);
+      });
+      article.addEventListener("pointerdown", startPointerAdjustment);
+      layer.append(article);
+    }
   }
 }
 
 function renderOverview() {
-  const scheduled = state.blocks.reduce((total, block) => total + Math.max(0, block.end - block.start), 0);
-  const available = DAY_END - DAY_START;
+  const scheduled = visibleDateKeys().flatMap((dateKey) => blocksForDate(dateKey))
+    .reduce((total, block) => total + Math.max(0, block.end - block.start), 0);
+  const available = (DAY_END - DAY_START) * viewDayCount;
   const free = Math.max(0, available - scheduled);
   const ratio = Math.min(100, Math.round((scheduled / available) * 100));
   elements.progressBar.style.width = `${ratio}%`;
@@ -263,17 +316,19 @@ function renderEventContents() {
 }
 
 function renderTonightRules() {
-  const tonight = state.rules.filter((rule) => occursOnDate(rule, now));
+  const focusedDate = dateForSchedule(focusDateKey);
+  const focusedBlocks = blocksForDate(focusDateKey);
+  const tonight = state.rules.filter((rule) => occursOnDate(rule, focusedDate));
   if (!tonight.length) {
-    elements.tonightRules.innerHTML = '<p class="empty-rules" aria-label="今晚没有重复日程">—</p>';
+    elements.tonightRules.innerHTML = '<p class="empty-rules" aria-label="该日没有重复日程">—</p>';
     return;
   }
   elements.tonightRules.innerHTML = tonight.map((rule) => {
-    const added = state.blocks.some((block) => block.sourceRuleId === rule.id);
+    const added = focusedBlocks.some((block) => block.sourceRuleId === rule.id);
     return `<div class="mini-rule" style="--rule-color:${COLOR_VALUES[rule.color]}">
       <span class="mini-rule-dot"></span>
       <span><strong>${escapeHtml(rule.title)}</strong><small>${formatTime(rule.start)} · ${formatDuration(rule.duration)}</small></span>
-      <button data-apply-rule="${rule.id}" aria-label="${added ? "已安排" : `将${escapeHtml(rule.title)}加入今晚`}" ${added ? "disabled" : ""}><svg><use href="#icon-${added ? "check" : "plus"}"></use></svg></button>
+      <button data-apply-rule="${rule.id}" aria-label="${added ? "已安排" : `将${escapeHtml(rule.title)}加入该日`}" ${added ? "disabled" : ""}><svg><use href="#icon-${added ? "check" : "plus"}"></use></svg></button>
     </div>`;
   }).join("");
 }
@@ -287,7 +342,7 @@ function renderWeekStrip() {
     const date = new Date(start);
     date.setDate(start.getDate() + index);
     const matching = state.rules.filter((rule) => occursOnDate(rule, date));
-    days.push(`<div class="week-day${toDateKey(date) === dateKey ? " today" : ""}">
+    days.push(`<div class="week-day${toDateKey(date) === todayDateKey ? " today" : ""}">
       <span>${FULL_DAY_NAMES[date.getDay()]}</span><strong>${date.getDate()}</strong>
       <div class="week-marks">${matching.map((rule) => `<i style="--mark-color:${COLOR_VALUES[rule.color]}"></i>`).join("")}</div>
     </div>`);
@@ -297,48 +352,64 @@ function renderWeekStrip() {
 
 function renderRuleList() {
   elements.ruleCount.textContent = state.rules.length;
+  const focusedBlocks = blocksForDate(focusDateKey);
   elements.ruleList.innerHTML = state.rules.map((rule) => {
-    const added = state.blocks.some((block) => block.sourceRuleId === rule.id);
+    const added = focusedBlocks.some((block) => block.sourceRuleId === rule.id);
     return `<article class="rule-card${rule.enabled ? "" : " disabled"}" style="--rule-color:${COLOR_VALUES[rule.color]}">
       <span class="rule-color"></span>
       <div class="rule-main"><strong>${escapeHtml(rule.title)}</strong><span class="rule-meta"><svg><use href="#icon-clock"></use></svg>${formatTime(rule.start)} · ${formatDuration(rule.duration)}</span></div>
       <div class="day-chips" aria-label="重复日期">${DAY_ORDER.map((day) => `<span class="${rule.days.includes(day) ? "on" : ""}">${DAY_NAMES[day]}</span>`).join("")}</div>
-      <button class="rule-add" data-apply-rule="${rule.id}" aria-label="${added ? "今晚已安排" : `将${escapeHtml(rule.title)}加入今晚`}" ${added || !rule.enabled ? "disabled" : ""}><svg><use href="#icon-${added ? "check" : "plus"}"></use></svg></button>
+      <button class="rule-add" data-apply-rule="${rule.id}" aria-label="${added ? "该日已安排" : `将${escapeHtml(rule.title)}加入该日`}" ${added || !rule.enabled ? "disabled" : ""}><svg><use href="#icon-${added ? "check" : "plus"}"></use></svg></button>
       <label class="switch" aria-label="${rule.enabled ? "停用" : "启用"}${escapeHtml(rule.title)}"><input type="checkbox" data-toggle-rule="${rule.id}" ${rule.enabled ? "checked" : ""} /><span></span></label>
     </article>`;
   }).join("");
 }
 
 function renderAll() {
+  const scrollTop = elements.timelineScroll?.scrollTop || 0;
+  renderDate();
+  renderTimelineFrame();
   renderBlocks();
   renderOverview();
   renderEventContents();
   renderTonightRules();
   renderWeekStrip();
   renderRuleList();
+  if (elements.timelineScroll) elements.timelineScroll.scrollTop = scrollTop;
 }
 
-function openBlockDialog(id = null, draftOverride = null) {
+function parseScheduleTime(value, allowDayEnd = false) {
+  if (allowDayEnd && String(value).trim() === "24:00") return DAY_END;
+  return parseTime(value);
+}
+
+function displayScheduleTime(minutes) {
+  return minutes === DAY_END ? "24:00" : formatTime(minutes);
+}
+
+function openBlockDialog(id = null, dateKey = focusDateKey, draftOverride = null) {
   if (!draftOverride) clearTimelineSelection();
   elements.blockError.textContent = "";
   elements.blockId.value = id || "";
-  const existing = id ? state.blocks.find((block) => block.id === id) : null;
+  const existing = id ? blocksForDate(dateKey).find((block) => block.id === id) : null;
   let draft = existing || draftOverride;
   if (!draft) {
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
-    const requested = currentMinutes >= DAY_START && currentMinutes < DAY_END
+    const requested = dateKey === todayDateKey && currentMinutes >= DAY_START && currentMinutes < DAY_END
       ? Math.ceil(currentMinutes / 5) * 5
       : DAY_START;
-    const slot = findNextFreeSlot(state.blocks, requested, DEFAULT_BLOCK_DURATION, DAY_START, DAY_END)
+    const slot = findNextFreeSlot(blocksForDate(dateKey), requested, DEFAULT_BLOCK_DURATION, DAY_START, DAY_END)
       || { start: DAY_START, end: DAY_START + DEFAULT_BLOCK_DURATION };
     draft = { title: "", start: slot.start, end: slot.end, color: "apricot" };
   }
+  elements.blockDate.value = draft.date || dateKey;
+  elements.blockOriginalDate.value = existing ? dateKey : "";
   elements.blockDialogKicker.textContent = existing ? "时间块" : "新的时间块";
-  elements.blockDialogTitle.textContent = existing ? "编辑今晚的安排" : "把一件事放进今晚";
+  elements.blockDialogTitle.textContent = existing ? "编辑安排" : "添加安排";
   elements.blockTitle.value = draft.title;
   elements.blockCategory.value = draft.category || "";
-  elements.blockStart.value = formatTime(draft.start);
-  elements.blockEnd.value = formatTime(draft.end);
+  elements.blockStart.value = displayScheduleTime(draft.start);
+  elements.blockEnd.value = displayScheduleTime(draft.end);
   elements.deleteBlockButton.hidden = !existing;
   const colorRadio = elements.blockForm.querySelector(`[name="blockColor"][value="${draft.color || "apricot"}"]`);
   if (colorRadio) colorRadio.checked = true;
@@ -348,10 +419,13 @@ function openBlockDialog(id = null, draftOverride = null) {
 
 function saveBlock(event) {
   event.preventDefault();
-  const start = parseTime(elements.blockStart.value);
-  const end = parseTime(elements.blockEnd.value);
+  const start = parseScheduleTime(elements.blockStart.value);
+  const end = parseScheduleTime(elements.blockEnd.value, true);
   const id = elements.blockId.value || `block-${Date.now()}`;
-  const existing = state.blocks.find((block) => block.id === id);
+  const originalDate = elements.blockOriginalDate.value;
+  const targetDate = elements.blockDate.value;
+  const originalBlocks = originalDate ? blocksForDate(originalDate) : [];
+  const existing = originalBlocks.find((block) => block.id === id);
   const candidate = {
     ...existing,
     id,
@@ -368,46 +442,53 @@ function saveBlock(event) {
     return;
   }
   if (start === null || end === null || start < DAY_START || end > DAY_END || end <= start) {
-    elements.blockError.textContent = `请选择 ${formatTime(DAY_START)} 到 ${formatTime(DAY_END)} 之间的有效时段。`;
+    elements.blockError.textContent = "请选择 00:00 到 24:00 之间的有效时段。";
     return;
   }
-  if (hasConflict(candidate, state.blocks, id)) {
+  if (!dateFromKey(targetDate)) {
+    elements.blockError.textContent = "请选择有效日期。";
+    return;
+  }
+  if (hasConflict(candidate, blocksForDate(targetDate), originalDate === targetDate ? id : null)) {
     elements.blockError.textContent = "这个时段和已有安排重叠了，换个时间试试。";
     return;
   }
 
-  state.blocks = existing
-    ? state.blocks.map((block) => block.id === id ? candidate : block)
-    : [...state.blocks, candidate];
+  if (existing) setBlocksForDate(originalDate, originalBlocks.filter((block) => block.id !== id));
+  setBlocksForDate(targetDate, [...blocksForDate(targetDate), candidate]);
+  focusDateKey = targetDate;
   saveState();
   renderAll();
   elements.blockDialog.close();
-  showToast(existing ? "时间块已更新" : "已放进今晚");
+  showToast(existing ? "时间块已更新" : "安排已添加");
 }
 
 function deleteBlock() {
   const id = elements.blockId.value;
   if (!id) return;
-  state.blocks = state.blocks.filter((block) => block.id !== id);
+  const dateKey = elements.blockOriginalDate.value || elements.blockDate.value;
+  setBlocksForDate(dateKey, blocksForDate(dateKey).filter((block) => block.id !== id));
   saveState();
   renderAll();
   elements.blockDialog.close();
-  showToast("已从今晚移除");
+  showToast("时间块已删除");
 }
 
-function toggleDone(id) {
-  state.blocks = state.blocks.map((block) => block.id === id ? { ...block, done: !block.done } : block);
+function toggleDone(id, dateKey) {
+  setBlocksForDate(dateKey, blocksForDate(dateKey).map((block) => block.id === id ? { ...block, done: !block.done } : block));
   saveState();
   renderAll();
-  const block = state.blocks.find((item) => item.id === id);
-  showToast(block.done ? "完成一项，做得不错" : "已恢复为待完成");
+  const block = blocksForDate(dateKey).find((item) => item.id === id);
+  showToast(block.done ? "完成一项" : "已恢复");
 }
 
 function applyRule(ruleId) {
   const rule = state.rules.find((item) => item.id === ruleId);
   if (!rule || !rule.enabled) return;
-  if (state.blocks.some((block) => block.sourceRuleId === rule.id)) {
-    showToast("这个重复日程已经在今晚了");
+  const dateKey = focusDateKey;
+  const dateBlocks = blocksForDate(dateKey);
+  if (dateBlocks.some((block) => block.sourceRuleId === rule.id)) {
+    showToast("该日已有这个重复日程");
     return;
   }
   const candidate = {
@@ -419,14 +500,14 @@ function applyRule(ruleId) {
     done: false,
     sourceRuleId: rule.id,
   };
-  if (hasConflict(candidate, state.blocks)) {
+  if (hasConflict(candidate, dateBlocks)) {
     showToast("这个时间已有安排，先调整一下时间轴吧");
     return;
   }
-  state.blocks.push(candidate);
+  setBlocksForDate(dateKey, [...dateBlocks, candidate]);
   saveState();
   renderAll();
-  showToast("重复日程已加入今晚");
+  showToast("重复日程已加入该日");
 }
 
 function buildDayOptions() {
@@ -496,10 +577,36 @@ function switchView(viewName) {
   elements.recurringView.classList.toggle("active", !isToday);
   elements.recurringView.hidden = isToday;
   document.querySelectorAll("[data-view]").forEach((button) => button.classList.toggle("active", button.dataset.view === viewName));
-  elements.viewTitle.textContent = isToday ? "今晚" : "重复";
+  elements.viewTitle.textContent = isToday ? "日程" : "重复";
   elements.clearDoneButton.hidden = !isToday;
   window.location.hash = viewName;
   window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function changeVisibleRange(direction) {
+  clearTimelineSelection();
+  const step = viewDayCount === 7 ? 7 : viewDayCount;
+  focusDateKey = addDateKeyDays(focusDateKey, direction * step);
+  renderAll();
+  elements.timelineScroll.scrollTop = viewDayCount === 1 && focusDateKey === todayDateKey
+    ? Math.max(0, (now.getHours() * 60 + now.getMinutes() - 90) * PIXELS_PER_MINUTE)
+    : 0;
+}
+
+function changeViewDayCount(dayCount) {
+  if (![1, 3, 7].includes(dayCount) || dayCount === viewDayCount) return;
+  clearTimelineSelection();
+  viewDayCount = dayCount;
+  state.viewDayCount = dayCount;
+  saveState();
+  renderAll();
+}
+
+function goToToday() {
+  clearTimelineSelection();
+  focusDateKey = todayDateKey;
+  renderAll();
+  elements.timelineScroll.scrollTop = Math.max(0, (now.getHours() * 60 + now.getMinutes() - 90) * PIXELS_PER_MINUTE);
 }
 
 function minuteAtPointer(clientY) {
@@ -508,15 +615,18 @@ function minuteAtPointer(clientY) {
   return Math.max(DAY_START, Math.min(DAY_END, minute));
 }
 
-function renderDraftSelection(range) {
-  const conflict = hasConflict(range, state.blocks);
-  activeSelection = range;
-  elements.draftSelection.hidden = false;
-  elements.draftSelection.style.top = `${(range.start - DAY_START) * PIXELS_PER_MINUTE}px`;
-  elements.draftSelection.style.height = `${(range.end - range.start) * PIXELS_PER_MINUTE}px`;
-  elements.draftSelection.classList.toggle("invalid", conflict);
-  elements.draftSelection.classList.toggle("compact", range.end - range.start <= 15);
-  elements.selectionTime.textContent = `${formatTime(range.start)} — ${formatTime(range.end)}`;
+function renderDraftSelection(dateKey, range) {
+  const conflict = hasConflict(range, blocksForDate(dateKey));
+  activeSelection = { date: dateKey, ...range };
+  const draftSelection = elements.timelineDays.querySelector(`[data-date="${dateKey}"] .draft-selection`);
+  const selectionTime = draftSelection?.querySelector(".selection-time");
+  if (!draftSelection || !selectionTime) return conflict;
+  draftSelection.hidden = false;
+  draftSelection.style.top = `${(range.start - DAY_START) * PIXELS_PER_MINUTE}px`;
+  draftSelection.style.height = `${(range.end - range.start) * PIXELS_PER_MINUTE}px`;
+  draftSelection.classList.toggle("invalid", conflict);
+  draftSelection.classList.toggle("compact", range.end - range.start <= 15);
+  selectionTime.textContent = `${displayScheduleTime(range.start)} — ${displayScheduleTime(range.end)}`;
   return conflict;
 }
 
@@ -557,7 +667,9 @@ function openContentForm() {
 function showActionPicker(point) {
   if (!activeSelection) return;
   selectionPoint = point;
-  elements.selectedRange.textContent = `${formatTime(activeSelection.start)} — ${formatTime(activeSelection.end)}`;
+  const parts = dateParts(activeSelection.date);
+  const dayLabel = viewDayCount === 1 ? "" : `${parts.month}/${parts.day} · `;
+  elements.selectedRange.textContent = `${dayLabel}${displayScheduleTime(activeSelection.start)} — ${displayScheduleTime(activeSelection.end)}`;
   renderEventContents();
   showContentList();
   elements.actionPicker.hidden = false;
@@ -568,8 +680,10 @@ function showActionPicker(point) {
 function clearTimelineSelection() {
   activeSelection = null;
   selectionPoint = null;
-  elements.draftSelection.hidden = true;
-  elements.draftSelection.classList.remove("invalid", "compact");
+  elements.timelineDays?.querySelectorAll(".draft-selection").forEach((selection) => {
+    selection.hidden = true;
+    selection.classList.remove("invalid", "compact");
+  });
   elements.actionPicker.hidden = true;
   elements.actionPicker.style.removeProperty("left");
   elements.actionPicker.style.removeProperty("top");
@@ -580,12 +694,13 @@ function clearTimelineSelection() {
 function createBlockFromContent(content) {
   if (!activeSelection) return;
   const range = { ...activeSelection };
-  if (hasConflict(range, state.blocks)) {
+  const dateBlocks = blocksForDate(range.date);
+  if (hasConflict(range, dateBlocks)) {
     clearTimelineSelection();
     showToast("这段时间已有安排，请重新划选");
     return;
   }
-  state.blocks.push({
+  setBlocksForDate(range.date, [...dateBlocks, {
     id: `block-${Date.now()}`,
     contentId: content.id,
     title: content.title,
@@ -594,11 +709,11 @@ function createBlockFromContent(content) {
     end: range.end,
     color: content.color || "apricot",
     done: false,
-  });
+  }]);
   clearTimelineSelection();
   saveState();
   renderAll();
-  showToast(`${formatTime(range.start)}—${formatTime(range.end)} 已安排「${content.title}」`);
+  showToast(`${displayScheduleTime(range.start)}—${displayScheduleTime(range.end)} 已安排「${content.title}」`);
 }
 
 function saveEventContent(event) {
@@ -625,19 +740,20 @@ function saveEventContent(event) {
 
 function startTimelineSelection(event) {
   if (event.button !== 0 || event.target.closest(".time-block") || event.target.closest("button")) return;
-  const gridRect = elements.timelineGrid.getBoundingClientRect();
-  if (event.clientX < gridRect.left || event.clientX > gridRect.right) return;
+  const dayColumn = event.target.closest(".day-column");
+  if (!dayColumn) return;
+  const dateKey = dayColumn.dataset.date;
 
   clearTimelineSelection();
   event.preventDefault();
   const anchor = minuteAtPointer(event.clientY);
   elements.timeline.setPointerCapture(event.pointerId);
   elements.timeline.classList.add("selecting");
-  renderDraftSelection(selectionRange(anchor, anchor, DAY_START, DAY_END));
+  renderDraftSelection(dateKey, selectionRange(anchor, anchor, DAY_START, DAY_END));
 
   const move = (moveEvent) => {
     moveEvent.preventDefault();
-    renderDraftSelection(selectionRange(anchor, minuteAtPointer(moveEvent.clientY), DAY_START, DAY_END));
+    renderDraftSelection(dateKey, selectionRange(anchor, minuteAtPointer(moveEvent.clientY), DAY_START, DAY_END));
   };
   const finish = (upEvent) => {
     elements.timeline.removeEventListener("pointermove", move);
@@ -645,7 +761,7 @@ function startTimelineSelection(event) {
     elements.timeline.removeEventListener("pointercancel", cancel);
     elements.timeline.classList.remove("selecting");
     if (!activeSelection) return;
-    if (hasConflict(activeSelection, state.blocks)) {
+    if (hasConflict(activeSelection, blocksForDate(dateKey))) {
       clearTimelineSelection();
       showToast("这段时间已有安排，请在空白处重新划选");
       return;
@@ -675,7 +791,8 @@ function guideToTimeline() {
 function startPointerAdjustment(event) {
   if (event.button !== 0 || event.target.closest("button")) return;
   const article = event.currentTarget;
-  const block = state.blocks.find((item) => item.id === article.dataset.id);
+  const dateKey = article.dataset.date;
+  const block = blocksForDate(dateKey).find((item) => item.id === article.dataset.id);
   if (!block) return;
   const resizing = Boolean(event.target.closest(".resize-handle"));
   const originY = event.clientY;
@@ -710,12 +827,12 @@ function startPointerAdjustment(event) {
       const start = Math.max(DAY_START, Math.min(DAY_END - duration, block.start + deltaMinutes));
       candidate = { ...block, start, end: start + duration };
     }
-    if (hasConflict(candidate, state.blocks, block.id)) {
+    if (hasConflict(candidate, blocksForDate(dateKey), block.id)) {
       renderBlocks();
       showToast("这里已有安排，时间块已放回原位");
       return;
     }
-    state.blocks = state.blocks.map((item) => item.id === block.id ? candidate : item);
+    setBlocksForDate(dateKey, blocksForDate(dateKey).map((item) => item.id === block.id ? candidate : item));
     saveState();
     renderAll();
     showToast(resizing ? "时长已调整" : `已移动到 ${formatTime(candidate.start)}`);
@@ -757,7 +874,10 @@ document.addEventListener("keydown", (event) => {
 });
 
 document.querySelectorAll("[data-view]").forEach((button) => button.addEventListener("click", () => switchView(button.dataset.view)));
-document.querySelector("#openAddButton").addEventListener("click", () => openBlockDialog());
+document.querySelectorAll("[data-view-days]").forEach((button) => button.addEventListener("click", () => changeViewDayCount(Number(button.dataset.viewDays))));
+elements.previousRangeButton.addEventListener("click", () => changeVisibleRange(-1));
+elements.nextRangeButton.addEventListener("click", () => changeVisibleRange(1));
+document.querySelector("#todayButton").addEventListener("click", goToToday);
 document.querySelector("#mobileAddButton").addEventListener("click", guideToTimeline);
 document.querySelector("#closeActionPicker").addEventListener("click", clearTimelineSelection);
 elements.newContentButton.addEventListener("click", openContentForm);
@@ -769,12 +889,13 @@ elements.blockForm.addEventListener("submit", saveBlock);
 elements.deleteBlockButton.addEventListener("click", deleteBlock);
 elements.ruleForm.addEventListener("submit", saveRule);
 elements.clearDoneButton.addEventListener("click", () => {
-  const completed = state.blocks.filter((block) => block.done).length;
+  const keys = visibleDateKeys();
+  const completed = keys.flatMap((dateKey) => blocksForDate(dateKey)).filter((block) => block.done).length;
   if (!completed) {
-    showToast("今晚还没有已完成的时间块");
+    showToast("当前范围没有已完成项");
     return;
   }
-  state.blocks = state.blocks.filter((block) => !block.done);
+  keys.forEach((dateKey) => setBlocksForDate(dateKey, blocksForDate(dateKey).filter((block) => !block.done)));
   saveState();
   renderAll();
   showToast(`已清理 ${completed} 个完成项`);
@@ -782,18 +903,18 @@ elements.clearDoneButton.addEventListener("click", () => {
 elements.timeline.addEventListener("pointerdown", startTimelineSelection);
 window.addEventListener("resize", positionActionPicker);
 
-renderDate();
-renderTimelineFrame();
 buildDayOptions();
 renderAll();
+goToToday();
 if (window.location.hash === "#recurring") switchView("recurring");
 setInterval(() => {
   const freshNow = new Date();
-  if (toDateKey(freshNow) !== dateKey) {
+  if (toDateKey(freshNow) !== todayDateKey) {
     window.location.reload();
     return;
   }
   now = freshNow;
-  renderTimelineFrame();
+  const nowLine = elements.timelineDays.querySelector(`[data-date="${todayDateKey}"] .now-line`);
+  if (nowLine) nowLine.style.top = `${(now.getHours() * 60 + now.getMinutes()) * PIXELS_PER_MINUTE}px`;
   renderOverview();
 }, 60_000);

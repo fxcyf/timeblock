@@ -79,7 +79,7 @@ test("snaps a dragged timeline selection outward to 15-minute steps", () => {
   });
 });
 
-test("turns a tap into a minimum selection and clamps it to the evening", () => {
+test("turns a tap into a minimum selection and clamps it to the configured range", () => {
   assert.deepEqual(selectionRange(23 * 60 + 28, 23 * 60 + 28, 1110, 1410), {
     start: 23 * 60 + 15,
     end: 23 * 60 + 30,
@@ -87,5 +87,13 @@ test("turns a tap into a minimum selection and clamps it to the evening", () => 
   assert.deepEqual(selectionRange(18 * 60, 18 * 60 + 20, 1110, 1410), {
     start: 18 * 60 + 30,
     end: 18 * 60 + 45,
+  });
+});
+
+test("supports selections at both edges of a full 24-hour day", () => {
+  assert.deepEqual(selectionRange(2, 22, 0, 24 * 60), { start: 0, end: 30 });
+  assert.deepEqual(selectionRange(24 * 60 - 2, 24 * 60 - 2, 0, 24 * 60), {
+    start: 24 * 60 - 15,
+    end: 24 * 60,
   });
 });

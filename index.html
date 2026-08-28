@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f3f0e8" />
-    <meta name="description" content="Timeblock：快速安排今晚，并用重复日程保持自己的生活节奏。" />
-    <title>Timeblock · 把今晚安排得刚刚好</title>
+    <meta name="description" content="Timeblock：划选时间，快速安排每天和周末。" />
+    <title>Timeblock · 快速安排时间</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -28,7 +28,7 @@
         </a>
 
         <nav class="main-nav" aria-label="主导航">
-          <button class="nav-item active" data-view="today" aria-label="今晚">
+          <button class="nav-item active" data-view="today" aria-label="日程">
             <svg><use href="#icon-timeline"></use></svg>
           </button>
           <button class="nav-item" data-view="recurring" aria-label="重复日程">
@@ -40,9 +40,19 @@
 
       <main class="main-content">
         <header class="topbar">
-          <p class="eyebrow" id="dateEyebrow"></p>
-          <h1 class="sr-only" id="viewTitle">今晚</h1>
+          <div class="date-navigation">
+            <button class="icon-button range-button previous" id="previousRangeButton" aria-label="上一日期范围"><svg><use href="#icon-chevron"></use></svg></button>
+            <p class="eyebrow" id="dateEyebrow"></p>
+            <button class="icon-button range-button" id="nextRangeButton" aria-label="下一日期范围"><svg><use href="#icon-chevron"></use></svg></button>
+          </div>
+          <h1 class="sr-only" id="viewTitle">日程</h1>
           <div class="topbar-actions">
+            <div class="view-range-control" aria-label="时间轴显示范围">
+              <button data-view-days="1" aria-label="显示一天">1</button>
+              <button data-view-days="3" aria-label="显示三天">3</button>
+              <button data-view-days="7" aria-label="显示一周">7</button>
+            </div>
+            <button class="icon-button topbar-icon today-control" id="todayButton" aria-label="回到今天">今</button>
             <button class="icon-button topbar-icon" id="clearDoneButton" aria-label="清理已完成">
               <svg><use href="#icon-trash"></use></svg>
             </button>
@@ -51,21 +61,16 @@
 
         <section class="view active" id="todayView" aria-labelledby="viewTitle">
           <div class="planner-layout">
-            <section class="timeline-card" aria-label="今晚时间轴">
+            <section class="timeline-card" aria-label="日程时间轴">
               <div class="card-heading">
-                <div class="progress-track" id="scheduleProgress" role="progressbar" aria-label="今晚已安排比例" aria-valuemin="0" aria-valuemax="100"><span id="progressBar"></span></div>
-                <button class="icon-button" id="openAddButton" aria-label="精确添加时间块"><svg><use href="#icon-plus"></use></svg></button>
+                <div class="progress-track" id="scheduleProgress" role="progressbar" aria-label="当前范围已安排比例" aria-valuemin="0" aria-valuemax="100"><span id="progressBar"></span></div>
               </div>
 
-              <div class="timeline-scroll">
+              <div class="timeline-scroll" id="timelineScroll">
+                <div class="timeline-headers" id="timelineHeaders"></div>
                 <div class="timeline" id="timeline">
                   <div class="time-axis" id="timeAxis"></div>
-                  <div class="timeline-grid" id="timelineGrid"></div>
-                  <div class="now-line" id="nowLine" hidden><span class="sr-only">现在</span></div>
-                  <div class="blocks-layer" id="blocksLayer"></div>
-                  <div class="draft-selection" id="draftSelection" hidden aria-live="polite">
-                    <span class="selection-time" id="selectionTime"></span>
-                  </div>
+                  <div class="timeline-days" id="timelineDays"></div>
                 </div>
               </div>
 
@@ -99,7 +104,7 @@
     </div>
 
     <nav class="mobile-nav" aria-label="移动端导航">
-      <button class="active" data-view="today" aria-label="今晚"><svg><use href="#icon-timeline"></use></svg></button>
+      <button class="active" data-view="today" aria-label="日程"><svg><use href="#icon-timeline"></use></svg></button>
       <button class="mobile-add" id="mobileAddButton" aria-label="到时间轴划选时间"><svg><use href="#icon-select-time"></use></svg></button>
       <button data-view="recurring" aria-label="重复日程"><svg><use href="#icon-repeat"></use></svg></button>
     </nav>
@@ -137,11 +142,13 @@
       <form method="dialog" id="blockForm">
         <div class="dialog-heading"><div><span class="section-kicker" id="blockDialogKicker">时间块</span><h2 id="blockDialogTitle">编辑安排</h2></div><button class="close-button" value="cancel" aria-label="关闭">×</button></div>
         <input type="hidden" id="blockId" />
+        <input type="hidden" id="blockOriginalDate" />
         <label class="field"><span>要做什么</span><input id="blockTitle" required maxlength="40" placeholder="例如：洗澡、阅读、运动" /></label>
         <label class="field"><span>分类（可选）</span><input id="blockCategory" list="categoryOptions" maxlength="20" placeholder="例如：健康" /></label>
+        <label class="field"><span>日期</span><input id="blockDate" type="date" required /></label>
         <div class="field-row">
-          <label class="field"><span>开始</span><input id="blockStart" type="time" required /></label>
-          <label class="field"><span>结束</span><input id="blockEnd" type="time" required /></label>
+          <label class="field"><span>开始</span><input id="blockStart" inputmode="numeric" pattern="(?:[01]\d|2[0-3]):[0-5]\d" placeholder="00:00" required /></label>
+          <label class="field"><span>结束</span><input id="blockEnd" inputmode="numeric" pattern="(?:(?:[01]\d|2[0-3]):[0-5]\d|24:00)" placeholder="24:00" required /></label>
         </div>
         <fieldset class="color-field"><legend>颜色</legend><div class="color-options">
           <label><input type="radio" name="blockColor" value="apricot" checked /><span class="apricot"></span></label>

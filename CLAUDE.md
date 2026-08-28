@@ -11,10 +11,10 @@
 
 - 零依赖响应式 Web 原型，使用原生 HTML、CSS 和 ECMAScript modules
 - `index.html` / `styles.css` / `app.js`：页面结构、视觉与交互状态
-- `src/schedule.js`：时间解析、冲突检测、空档与重复规则；`src/content.js`：事件内容、分类与常用列表逻辑
+- `src/schedule.js`：时间解析、冲突检测、空档与重复规则；`src/calendar.js`：日期范围和旧数据迁移；`src/content.js`：事件内容、分类与常用列表逻辑
 - `test/`：Node.js 原生测试；`scripts/serve.mjs`：本地静态服务器
-- 时间在领域层统一表示为当天分钟数，MVP 规划窗口为 18:30–23:30
-- 当天时间块、重复规则和事件内容库保存在浏览器 `localStorage` 的 `timeblock-state-v1`
+- 时间在领域层统一表示为当天分钟数，时间轴覆盖 00:00–24:00；支持 1 日、连续 3 日和周一开始的 7 日视图
+- 时间块按日期保存在 `blocksByDate`，与重复规则、事件内容库和视图偏好一同写入浏览器 `localStorage` 的 `timeblock-state-v1`；旧单日 `blocks` 自动迁移
 - 常驻界面采用文字最少化约定：只显示日期、时间、行动与必要数据，图标按钮必须保留可访问名称
 - `.github/workflows/static.yml`：推送 `main` 后自动发布到 GitHub Pages
 
