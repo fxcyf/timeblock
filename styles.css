@@ -545,6 +545,7 @@ body { background: var(--bg); }
 .today-control { font-size: 10px; font-weight: 700; }
 .card-heading .progress-track { margin-left: 0; }
 .timeline-scroll { position: relative; max-height: calc(100vh - 176px); overflow-y: auto; overscroll-behavior: contain; }
+.timeline-scroll.touch-selecting { overflow-y: hidden; }
 .timeline-headers { position: sticky; z-index: 20; top: 0; height: 42px; display: grid; grid-template-columns: 50px repeat(var(--view-days), minmax(0, 1fr)); border-bottom: 1px solid var(--line); background: rgba(255,255,255,.96); }
 .header-axis { border-right: 1px solid var(--line); }
 .day-header { min-width: 0; display: flex; align-items: center; justify-content: center; gap: 5px; border-left: 1px solid var(--line); color: var(--muted); background: transparent; }
@@ -555,9 +556,9 @@ body { background: var(--bg); }
 .time-axis { width: 50px; }
 .axis-label { width: 40px; }
 .timeline-days { position: absolute; inset: 0 0 0 50px; display: grid; grid-template-columns: repeat(var(--view-days), minmax(0, 1fr)); }
-.day-column { position: relative; min-width: 0; border-left: 1px solid var(--line); cursor: ns-resize; touch-action: none; }
+.day-column { position: relative; min-width: 0; border-left: 1px solid var(--line); cursor: ns-resize; touch-action: pan-y; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 .day-grid, .day-column .blocks-layer { position: absolute; inset: 0; }
-.day-column .blocks-layer { left: 3px; right: 3px; cursor: inherit; }
+.day-column .blocks-layer { left: 3px; right: 3px; cursor: inherit; touch-action: pan-y; }
 .day-column .now-line { left: 0; right: 0; }
 .day-column .now-line::before { left: -4px; }
 .day-column .draft-selection { left: 3px; right: 3px; min-height: 18px; padding: 4px 20px 4px 7px; }

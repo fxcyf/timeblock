@@ -22,11 +22,14 @@ import {
   migrateBlocksByDate,
   visibleDateKeys as buildVisibleDateKeys,
 } from "./src/calendar.js";
+import { hasMovedBeyondTolerance } from "./src/gesture.js";
 
 const DAY_START = 0;
 const DAY_END = 24 * 60;
 const PIXELS_PER_MINUTE = 1.2;
 const DEFAULT_BLOCK_DURATION = 45;
+const LONG_PRESS_DELAY = 360;
+const LONG_PRESS_MOVE_TOLERANCE = 8;
 const STORAGE_KEY = "timeblock-state-v1";
 const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
 const DAY_NAMES = ["日", "一", "二", "三", "四", "五", "六"];
@@ -61,6 +64,8 @@ let toastTimer;
 let ignoreBlockClickUntil = 0;
 let activeSelection = null;
 let selectionPoint = null;
+let touchSelection = null;
+let suppressContextMenuUntil = 0;
 
 const elements = {
   actionOptions: document.querySelector("#actionOptions"),
@@ -688,6 +693,7 @@ function clearTimelineSelection() {
   elements.actionPicker.style.removeProperty("left");
   elements.actionPicker.style.removeProperty("top");
   elements.timeline.classList.remove("selecting");
+  elements.timelineScroll.classList.remove("touch-selecting");
   showContentList();
 }
 
@@ -738,8 +744,19 @@ function saveEventContent(event) {
   createBlockFromContent(result.content);
 }
 
+function completeTimelineSelection(dateKey, point) {
+  elements.timeline.classList.remove("selecting");
+  if (!activeSelection) return;
+  if (hasConflict(activeSelection, blocksForDate(dateKey))) {
+    clearTimelineSelection();
+    showToast("这段时间已有安排，请在空白处重新划选");
+    return;
+  }
+  showActionPicker(point);
+}
+
 function startTimelineSelection(event) {
-  if (event.button !== 0 || event.target.closest(".time-block") || event.target.closest("button")) return;
+  if (event.pointerType === "touch" || event.button !== 0 || event.target.closest(".time-block") || event.target.closest("button")) return;
   const dayColumn = event.target.closest(".day-column");
   if (!dayColumn) return;
   const dateKey = dayColumn.dataset.date;
@@ -759,14 +776,7 @@ function startTimelineSelection(event) {
     elements.timeline.removeEventListener("pointermove", move);
     elements.timeline.removeEventListener("pointerup", finish);
     elements.timeline.removeEventListener("pointercancel", cancel);
-    elements.timeline.classList.remove("selecting");
-    if (!activeSelection) return;
-    if (hasConflict(activeSelection, blocksForDate(dateKey))) {
-      clearTimelineSelection();
-      showToast("这段时间已有安排，请在空白处重新划选");
-      return;
-    }
-    showActionPicker({ x: upEvent.clientX, y: upEvent.clientY });
+    completeTimelineSelection(dateKey, { x: upEvent.clientX, y: upEvent.clientY });
   };
   const cancel = () => {
     elements.timeline.removeEventListener("pointermove", move);
@@ -777,6 +787,87 @@ function startTimelineSelection(event) {
   elements.timeline.addEventListener("pointermove", move);
   elements.timeline.addEventListener("pointerup", finish);
   elements.timeline.addEventListener("pointercancel", cancel, { once: true });
+}
+
+function touchById(touches, identifier) {
+  return [...touches].find((touch) => touch.identifier === identifier);
+}
+
+function clearPendingTouchSelection(clearDraft = false) {
+  if (!touchSelection) return;
+  clearTimeout(touchSelection.timer);
+  const wasActive = touchSelection.active;
+  if (wasActive) elements.timelineScroll.scrollTop = touchSelection.scrollTop;
+  touchSelection = null;
+  elements.timeline.classList.remove("selecting");
+  elements.timelineScroll.classList.remove("touch-selecting");
+  if (clearDraft && wasActive) clearTimelineSelection();
+}
+
+function startTouchTimelineSelection(event) {
+  if (event.touches.length !== 1 || event.target.closest(".time-block") || event.target.closest("button")) return;
+  const dayColumn = event.target.closest(".day-column");
+  const touch = event.touches[0];
+  if (!dayColumn || !touch) return;
+
+  clearPendingTouchSelection(true);
+  clearTimelineSelection();
+  const pending = {
+    active: false,
+    anchor: minuteAtPointer(touch.clientY),
+    dateKey: dayColumn.dataset.date,
+    identifier: touch.identifier,
+    origin: { x: touch.clientX, y: touch.clientY },
+    scrollTop: elements.timelineScroll.scrollTop,
+    timer: null,
+  };
+  pending.timer = setTimeout(() => {
+    if (touchSelection !== pending) return;
+    pending.active = true;
+    suppressContextMenuUntil = Date.now() + 1200;
+    elements.timeline.classList.add("selecting");
+    elements.timelineScroll.classList.add("touch-selecting");
+    renderDraftSelection(pending.dateKey, selectionRange(pending.anchor, pending.anchor, DAY_START, DAY_END));
+    if (navigator.vibrate) navigator.vibrate(8);
+  }, LONG_PRESS_DELAY);
+  touchSelection = pending;
+}
+
+function moveTouchTimelineSelection(event) {
+  if (!touchSelection) return;
+  const touch = touchById(event.touches, touchSelection.identifier);
+  if (!touch) return;
+  if (!touchSelection.active) {
+    if (hasMovedBeyondTolerance(touchSelection.origin, { x: touch.clientX, y: touch.clientY }, LONG_PRESS_MOVE_TOLERANCE)) {
+      clearPendingTouchSelection();
+    }
+    return;
+  }
+
+  event.preventDefault();
+  elements.timelineScroll.scrollTop = touchSelection.scrollTop;
+  renderDraftSelection(
+    touchSelection.dateKey,
+    selectionRange(touchSelection.anchor, minuteAtPointer(touch.clientY), DAY_START, DAY_END),
+  );
+}
+
+function finishTouchTimelineSelection(event) {
+  if (!touchSelection) return;
+  const touch = touchById(event.changedTouches, touchSelection.identifier);
+  const finished = touchSelection;
+  clearTimeout(finished.timer);
+  touchSelection = null;
+  if (!finished.active || !touch) return;
+
+  event.preventDefault();
+  elements.timelineScroll.scrollTop = finished.scrollTop;
+  elements.timelineScroll.classList.remove("touch-selecting");
+  completeTimelineSelection(finished.dateKey, { x: touch.clientX, y: touch.clientY });
+}
+
+function cancelTouchTimelineSelection() {
+  clearPendingTouchSelection(true);
 }
 
 function guideToTimeline() {
@@ -901,6 +992,13 @@ elements.clearDoneButton.addEventListener("click", () => {
   showToast(`已清理 ${completed} 个完成项`);
 });
 elements.timeline.addEventListener("pointerdown", startTimelineSelection);
+elements.timeline.addEventListener("touchstart", startTouchTimelineSelection, { passive: true });
+elements.timeline.addEventListener("touchmove", moveTouchTimelineSelection, { passive: false });
+elements.timeline.addEventListener("touchend", finishTouchTimelineSelection, { passive: false });
+elements.timeline.addEventListener("touchcancel", cancelTouchTimelineSelection);
+elements.timeline.addEventListener("contextmenu", (event) => {
+  if (Date.now() < suppressContextMenuUntil && event.target.closest(".day-column")) event.preventDefault();
+});
 window.addEventListener("resize", positionActionPicker);
 
 buildDayOptions();
