@@ -47,14 +47,6 @@ export function selectionRange(anchor, current, dayStart, dayEnd, step = 15, min
   return { start, end };
 }
 
-export function recurringRulesConflict(left, right) {
-  const sharesDay = left.days.some((day) => right.days.includes(day));
-  if (!sharesDay) return false;
-  const leftEnd = left.start + left.duration;
-  const rightEnd = right.start + right.duration;
-  return left.start < rightEnd && leftEnd > right.start;
-}
-
 export function findNextFreeSlot(blocks, requestedStart, duration, dayStart, dayEnd) {
   if (duration <= 0 || dayEnd - dayStart < duration) return null;
   const sorted = sortBlocks(blocks).filter((block) => block.end > dayStart && block.start < dayEnd);
@@ -67,30 +59,4 @@ export function findNextFreeSlot(blocks, requestedStart, duration, dayStart, day
   }
 
   return cursor + duration <= dayEnd ? { start: cursor, end: cursor + duration } : null;
-}
-
-export function occursOnDate(rule, date) {
-  return rule.enabled !== false && Array.isArray(rule.days) && rule.days.includes(date.getDay());
-}
-
-export function materializeRecurring(rules, date, existingBlocks = []) {
-  const additions = [];
-  for (const rule of rules) {
-    if (!occursOnDate(rule, date)) continue;
-    const alreadyExists = existingBlocks.some((block) => block.sourceRuleId === rule.id)
-      || additions.some((block) => block.sourceRuleId === rule.id);
-    if (alreadyExists) continue;
-
-    const candidate = {
-      id: `block-${rule.id}-${date.toISOString().slice(0, 10)}`,
-      title: rule.title,
-      start: rule.start,
-      end: rule.start + rule.duration,
-      color: rule.color || "sage",
-      done: false,
-      sourceRuleId: rule.id,
-    };
-    if (!hasConflict(candidate, [...existingBlocks, ...additions])) additions.push(candidate);
-  }
-  return additions;
 }

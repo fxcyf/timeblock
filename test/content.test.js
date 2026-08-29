@@ -5,6 +5,8 @@ import {
   colorForEventContent,
   eventContentCategories,
   favoriteEventContents,
+  moveEventContent,
+  removeEventContent,
   updateEventContent,
   upsertEventContent,
 } from "../src/content.js";
@@ -25,6 +27,7 @@ test("creates event content with an optional category and favorite flag", () => 
       category: "健康",
       favorite: true,
       color: "sage",
+      sortOrder: 0,
     },
     contents: [{
       id: "content-walk",
@@ -32,6 +35,7 @@ test("creates event content with an optional category and favorite flag", () => 
       category: "健康",
       favorite: true,
       color: "sage",
+      sortOrder: 0,
     }],
     created: true,
   });
@@ -101,4 +105,26 @@ test("rejects an event content edit that would create a duplicate", () => {
     favorite: true,
     color: "sage",
   }), null);
+});
+
+test("deletes and reorders reusable event content without touching block snapshots", () => {
+  const contents = [
+    { id: "walk", title: "散步", favorite: true, sortOrder: 0 },
+    { id: "read", title: "阅读", favorite: true, sortOrder: 1 },
+    { id: "tea", title: "泡茶", favorite: false, sortOrder: 2 },
+  ];
+
+  assert.deepEqual(removeEventContent(contents, "read").map((item) => item.id), ["walk", "tea"]);
+  assert.deepEqual(moveEventContent(contents, "read", -1).map((item) => item.id), ["read", "walk", "tea"]);
+  assert.deepEqual(moveEventContent(contents, "walk", -1).map((item) => item.id), ["walk", "read", "tea"]);
+});
+
+test("reorders favorites across hidden one-off content", () => {
+  const contents = [
+    { id: "walk", title: "散步", favorite: true, sortOrder: 0 },
+    { id: "tea", title: "泡茶", favorite: false, sortOrder: 1 },
+    { id: "read", title: "阅读", favorite: true, sortOrder: 2 },
+  ];
+  const moved = moveEventContent(contents, "read", -1);
+  assert.deepEqual(favoriteEventContents(moved).map((item) => item.id), ["read", "walk"]);
 });

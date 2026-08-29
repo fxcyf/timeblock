@@ -5,10 +5,7 @@ import {
   findNextFreeSlot,
   formatDuration,
   hasConflict,
-  materializeRecurring,
-  occursOnDate,
   parseTime,
-  recurringRulesConflict,
   selectionRange,
 } from "../src/schedule.js";
 
@@ -31,32 +28,6 @@ test("finds the first free slot after existing blocks", () => {
   ];
   assert.deepEqual(findNextFreeSlot(blocks, 1110, 30, 1110, 1380), { start: 1150, end: 1180 });
   assert.equal(findNextFreeSlot(blocks, 1370, 30, 1110, 1380), null);
-});
-
-test("creates enabled recurring blocks once on matching weekdays", () => {
-  const tuesday = new Date("2026-08-25T12:00:00Z");
-  const rule = { id: "workout", title: "训练", start: 1200, duration: 60, days: [2, 4], enabled: true };
-  assert.equal(occursOnDate(rule, tuesday), true);
-  const created = materializeRecurring([rule], tuesday);
-  assert.equal(created.length, 1);
-  assert.equal(created[0].sourceRuleId, "workout");
-  assert.equal(materializeRecurring([rule], tuesday, created).length, 0);
-  assert.equal(occursOnDate({ ...rule, enabled: false }, tuesday), false);
-});
-
-test("rejects overlapping recurring rules that share a day", () => {
-  const dinner = { start: 1140, duration: 45, days: [1, 2, 3, 4, 5] };
-  const walk = { start: 1170, duration: 30, days: [2, 4] };
-  const weekendWalk = { ...walk, days: [6, 0] };
-  assert.equal(recurringRulesConflict(dinner, walk), true);
-  assert.equal(recurringRulesConflict(dinner, weekendWalk), false);
-
-  const tuesday = new Date("2026-08-25T12:00:00Z");
-  const rules = [
-    { ...dinner, id: "dinner", title: "晚餐", enabled: true },
-    { ...walk, id: "walk", title: "散步", enabled: true },
-  ];
-  assert.equal(materializeRecurring(rules, tuesday).length, 1);
 });
 
 test("formats readable durations", () => {

@@ -7,7 +7,9 @@ export function eventContentCategories(contents) {
 }
 
 export function favoriteEventContents(contents) {
-  return contents.filter((content) => content.favorite === true);
+  return contents
+    .filter((content) => content.favorite === true)
+    .sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0));
 }
 
 export function colorForEventContent(contents, category, palette) {
@@ -45,8 +47,28 @@ export function upsertEventContent(contents, draft) {
     category,
     favorite: draft.favorite === true,
     color: draft.color,
+    sortOrder: Number.isInteger(draft.sortOrder) ? draft.sortOrder : contents.length,
   };
   return { content, contents: [...contents, content], created: true };
+}
+
+export function removeEventContent(contents, id) {
+  return contents
+    .filter((content) => content.id !== id)
+    .map((content, index) => ({ ...content, sortOrder: index }));
+}
+
+export function moveEventContent(contents, id, direction) {
+  const ordered = [...contents].sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0));
+  const index = ordered.findIndex((content) => content.id === id);
+  if (index < 0) return ordered;
+  const peers = ordered.map((content, peerIndex) => ({ content, peerIndex }))
+    .filter(({ content }) => content.favorite === ordered[index].favorite);
+  const peerPosition = peers.findIndex(({ peerIndex }) => peerIndex === index);
+  const targetPeer = Math.max(0, Math.min(peers.length - 1, peerPosition + Math.sign(direction)));
+  const target = peers[targetPeer].peerIndex;
+  if (target !== index) [ordered[index], ordered[target]] = [ordered[target], ordered[index]];
+  return ordered.map((content, sortOrder) => ({ ...content, sortOrder }));
 }
 
 export function updateEventContent(contents, id, draft) {
