@@ -228,17 +228,19 @@
     </dialog>
 
     <div class="selection-toolbar" id="selectionToolbar" hidden role="toolbar" aria-label="批量操作">
-      <strong id="selectionCount">已选 0 项</strong>
-      <button type="button" class="secondary-button" id="shift15Button">+15</button>
-      <button type="button" class="secondary-button" id="shift30Button">+30</button>
-      <button type="button" class="secondary-button" id="copySelectionButton"><svg><use href="#icon-copy"></use></svg>复制</button>
-      <button type="button" class="primary-button" id="moveSelectionButton"><svg><use href="#icon-move"></use></svg>整体移动</button>
+      <span class="selection-summary"><strong id="selectionCount">已选 0 项</strong><span class="selection-drag-hint"><svg><use href="#icon-move"></use></svg>拖动已选项移动</span></span>
+      <span class="selection-actions">
+        <button type="button" class="secondary-button" id="shift15Button">+15</button>
+        <button type="button" class="secondary-button" id="shift30Button">+30</button>
+        <button type="button" class="secondary-button" id="copySelectionButton"><svg><use href="#icon-copy"></use></svg>复制</button>
+        <button type="button" class="danger-button" id="deleteSelectionButton"><svg><use href="#icon-trash"></use></svg>删除</button>
+      </span>
       <button type="button" class="icon-button" id="cancelSelectionButton" aria-label="退出选择">×</button>
     </div>
 
     <dialog id="groupDialog" class="sheet-dialog">
       <form method="dialog" id="groupForm" novalidate>
-        <div class="dialog-heading"><div><span>批量操作</span><h2 id="groupDialogTitle">整体移动</h2></div><button type="button" class="close-button" id="closeGroupButton" aria-label="关闭">×</button></div>
+        <div class="dialog-heading"><div><span>批量操作</span><h2 id="groupDialogTitle">复制时间块</h2></div><button type="button" class="close-button" id="closeGroupButton" aria-label="关闭">×</button></div>
         <input type="hidden" id="groupMode" />
         <label class="field"><span>目标日期</span><input id="groupDate" type="date" /></label>
         <label class="field"><span>最早一项的开始时间</span><input id="groupStart" type="time" /></label>

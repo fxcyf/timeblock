@@ -16,6 +16,22 @@ function detachedCopy(block, id) {
   return copy;
 }
 
+export function targetForGroupDrag({ items, draggedDate, draggedBlockId, pointerDate, pointerMinute, grabOffset = 0, snapMinutes = 15 }) {
+  if (!Array.isArray(items) || !items.length || !dateFromKey(pointerDate) || !Number.isFinite(pointerMinute) || !Number.isFinite(grabOffset)) return null;
+  const ordered = [...items].sort((left, right) => left.date.localeCompare(right.date) || left.block.start - right.block.start || left.block.end - right.block.end);
+  const anchor = ordered[0];
+  const dragged = items.find((item) => item.date === draggedDate && item.block.id === draggedBlockId);
+  if (!dragged) return null;
+  const draggedDateOffset = dayDifference(anchor.date, dragged.date);
+  if (draggedDateOffset === null) return null;
+  const step = Number.isInteger(snapMinutes) && snapMinutes > 0 ? snapMinutes : 15;
+  const draggedStart = Math.round((pointerMinute - grabOffset) / step) * step;
+  return {
+    targetDate: addDateKeyDays(pointerDate, -draggedDateOffset),
+    targetStart: draggedStart + anchor.block.start - dragged.block.start,
+  };
+}
+
 export function planGroupTransform({ items, targetDate, targetStart, mode, existingByDate = {}, createId = (_, index) => `block-${Date.now()}-${index}` }) {
   if (!Array.isArray(items) || !items.length || !dateFromKey(targetDate) || !Number.isInteger(targetStart) || !["move", "copy"].includes(mode)) {
     return { ok: false, candidates: [], conflicts: [{ reason: "invalid" }] };

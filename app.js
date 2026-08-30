@@ -25,7 +25,7 @@ import { createBackup, parseBackup } from "./src/backup.js";
 import { migrateAppState } from "./src/state.js";
 import { validateRuleDraft } from "./src/forms.js";
 import { gridCellAtPoint, gridSelectionRange, splitBlockIntoHourSegments } from "./src/grid.js";
-import { planGroupTransform } from "./src/group.js";
+import { planGroupTransform, targetForGroupDrag } from "./src/group.js";
 import { COLOR_PRESETS, colorTokens, normalizeColorValue, resolveColor } from "./src/theme.js";
 import {
   materializeRecurringForDate,
@@ -79,7 +79,7 @@ let selectedBlockKeys = new Set();
 let lastHourGridMode = null;
 
 const elements = Object.fromEntries([
-  "accentCustomColor", "accentOptions", "actionOptions", "actionPicker", "archiveLibraryContentButton", "archivedEventContentLibrary", "blockCategory", "blockCustomColor", "blockDate", "blockDialog", "blockDialogKicker", "blockDialogTitle", "blockEnd", "blockError", "blockForm", "blockId", "blockOriginalDate", "blockScopeField", "blockStart", "blockTitle", "cancelBlockButton", "cancelContentButton", "cancelGroupButton", "cancelLibraryContentButton", "cancelRuleButton", "cancelSelectionButton", "categoryOptions", "clearDataButton", "clearDoneButton", "closeActionPicker", "closeBlockButton", "closeGroupButton", "closeLibraryContentButton", "closeRuleButton", "contentCategory", "contentError", "contentFavorite", "contentForm", "contentListView", "contentTitle", "copySelectionButton", "dataSummary", "dateEyebrow", "dayOptions", "defaultViewSetting", "deleteBlockButton", "deleteLibraryContentButton", "deleteRuleButton", "eventContentLibrary", "exportDataButton", "groupDate", "groupDialog", "groupDialogTitle", "groupError", "groupForm", "groupMode", "groupStart", "importDataButton", "importDataFile", "libraryContentCategory", "libraryContentCustomColor", "libraryContentDialog", "libraryContentDialogTitle", "libraryContentError", "libraryContentForm", "libraryContentId", "libraryContentTitle", "manageView", "moveSelectionButton", "newContentButton", "newFavoriteButton", "newRuleButton", "nextRangeButton", "previousRangeButton", "recurringView", "ruleCategory", "ruleCustomColor", "ruleDialog", "ruleDialogTitle", "ruleDuration", "ruleEndDate", "ruleError", "ruleForm", "ruleId", "ruleList", "ruleStart", "ruleStartDate", "ruleTitle", "selectedRange", "selectionCount", "selectionModeButton", "selectionToolbar", "shift15Button", "shift30Button", "snapSetting", "timeAxis", "timeline", "timelineDays", "timelineHeaders", "timelineScroll", "toast", "todayButton", "todayView", "topbar", "undoButton", "viewTitle", "weekStrip",
+  "accentCustomColor", "accentOptions", "actionOptions", "actionPicker", "archiveLibraryContentButton", "archivedEventContentLibrary", "blockCategory", "blockCustomColor", "blockDate", "blockDialog", "blockDialogKicker", "blockDialogTitle", "blockEnd", "blockError", "blockForm", "blockId", "blockOriginalDate", "blockScopeField", "blockStart", "blockTitle", "cancelBlockButton", "cancelContentButton", "cancelGroupButton", "cancelLibraryContentButton", "cancelRuleButton", "cancelSelectionButton", "categoryOptions", "clearDataButton", "clearDoneButton", "closeActionPicker", "closeBlockButton", "closeGroupButton", "closeLibraryContentButton", "closeRuleButton", "contentCategory", "contentError", "contentFavorite", "contentForm", "contentListView", "contentTitle", "copySelectionButton", "dataSummary", "dateEyebrow", "dayOptions", "defaultViewSetting", "deleteBlockButton", "deleteLibraryContentButton", "deleteRuleButton", "deleteSelectionButton", "eventContentLibrary", "exportDataButton", "groupDate", "groupDialog", "groupDialogTitle", "groupError", "groupForm", "groupMode", "groupStart", "importDataButton", "importDataFile", "libraryContentCategory", "libraryContentCustomColor", "libraryContentDialog", "libraryContentDialogTitle", "libraryContentError", "libraryContentForm", "libraryContentId", "libraryContentTitle", "manageView", "newContentButton", "newFavoriteButton", "newRuleButton", "nextRangeButton", "previousRangeButton", "recurringView", "ruleCategory", "ruleCustomColor", "ruleDialog", "ruleDialogTitle", "ruleDuration", "ruleEndDate", "ruleError", "ruleForm", "ruleId", "ruleList", "ruleStart", "ruleStartDate", "ruleTitle", "selectedRange", "selectionCount", "selectionModeButton", "selectionToolbar", "shift15Button", "shift30Button", "snapSetting", "timeAxis", "timeline", "timelineDays", "timelineHeaders", "timelineScroll", "toast", "todayButton", "todayView", "topbar", "undoButton", "viewTitle", "weekStrip",
 ].map((id) => [id, document.querySelector(`#${id}`)]));
 
 function toDateKey(date) {
@@ -226,7 +226,7 @@ function renderTimelineFrame() {
   const hourGrid = usesHourGrid();
   lastHourGridMode = hourGrid;
   elements.timeline.style.height = hourGrid ? "auto" : `${DAY_END * PIXELS_PER_MINUTE}px`;
-  elements.timeline.className = `timeline timeline-view-${viewDayCount}${hourGrid ? " hour-grid-mode" : ""}`;
+  elements.timeline.className = `timeline timeline-view-${viewDayCount}${hourGrid ? " hour-grid-mode" : ""}${selectionMode ? " selection-mode" : ""}`;
   elements.timeline.style.setProperty("--view-days", String(viewDayCount));
   elements.timelineHeaders.style.setProperty("--view-days", String(viewDayCount));
   elements.timelineHeaders.hidden = hourGrid;
@@ -270,7 +270,7 @@ function configureBlockArticle(article, block, dateKey, segment = null) {
   article.tabIndex = 0;
   article.setAttribute("role", "button");
   article.setAttribute("aria-pressed", selectionMode ? String(selected) : "false");
-  article.setAttribute("aria-label", `${block.category ? `${block.category}，` : ""}${block.title}，${dateKey} ${formatTime(block.start)} 到 ${displayScheduleTime(block.end)}${selectionMode ? "，点击选择" : "，点击编辑"}`);
+  article.setAttribute("aria-label", `${block.category ? `${block.category}，` : ""}${block.title}，${dateKey} ${formatTime(block.start)} 到 ${displayScheduleTime(block.end)}${selectionMode ? "，点击选择，拖动已选项可移动整组" : "，点击编辑"}`);
   const showMeta = !segment || segment.first;
   const showCheck = !segment || segment.first;
   article.innerHTML = `${showMeta ? `<span class="block-meta"><span>${formatTime(block.start)} — ${displayScheduleTime(block.end)}</span>${block.category ? `<span class="block-category">${escapeHtml(block.category)}</span>` : ""}</span>` : ""}<strong class="block-title">${escapeHtml(block.title)}</strong>${showCheck ? `<button type="button" class="block-check" aria-label="${block.done ? "标记为未完成" : "标记为已完成"}"><svg><use href="#icon-check"></use></svg></button>` : ""}${segment ? "" : '<span class="resize-handle" aria-hidden="true"></span>'}`;
@@ -822,6 +822,14 @@ function minuteAtPointer(clientY, clientX = 0, target = null) {
   return Math.max(DAY_START, Math.min(DAY_END, (clientY - rect.top) / PIXELS_PER_MINUTE));
 }
 
+function dateAtPointer(clientX) {
+  const keys = visibleDateKeys();
+  if (usesHourGrid() || keys.length === 1) return keys[0];
+  const rect = elements.timelineDays.getBoundingClientRect();
+  const relativeX = Math.max(0, Math.min(rect.width - 1, clientX - rect.left));
+  return keys[Math.min(keys.length - 1, Math.floor((relativeX / Math.max(1, rect.width)) * keys.length))];
+}
+
 function rangeFromPointers(anchor, current) {
   return usesHourGrid()
     ? gridSelectionRange(anchor, current)
@@ -1053,7 +1061,7 @@ function toggleBlockSelection(dateKey, id) {
 
 function startBlockPointerInteraction(event) {
   if (event.target.closest("button") || event.button !== 0) return;
-  if (selectionMode) return;
+  if (selectionMode) { startGroupPointerDrag(event); return; }
   if (event.pointerType !== "touch") { startPointerAdjustment(event); return; }
   const article = event.currentTarget;
   const origin = { x: event.clientX, y: event.clientY };
@@ -1083,6 +1091,107 @@ function groupPlan(mode, targetDate, targetStart) {
   const dates = [...new Set(preview.candidates.map((candidate) => candidate.targetDate).filter(Boolean))];
   const existingByDate = Object.fromEntries(dates.map((dateKey) => [dateKey, blocksForDate(dateKey)]));
   return planGroupTransform({ ...args, existingByDate });
+}
+
+function renderedBlockElements(dateKey, id) {
+  return [...elements.timelineDays.querySelectorAll(".time-block[data-date][data-id]")].filter((block) => block.dataset.date === dateKey && block.dataset.id === id);
+}
+
+function clearGroupDragPreview() {
+  elements.timeline.classList.remove("group-dragging");
+  elements.timelineDays.querySelectorAll(".group-drag-preview").forEach((preview) => preview.remove());
+  elements.timelineDays.querySelectorAll(".group-drag-source").forEach((block) => block.classList.remove("group-drag-source"));
+}
+
+function createGroupDragPreview(candidate, segment, invalid) {
+  const preview = document.createElement("div");
+  preview.className = `time-block group-drag-preview${segment ? " hour-segment" : ""}${segment?.first ? " segment-first" : ""}${segment?.last ? " segment-last" : ""}${invalid ? " invalid" : ""}`;
+  preview.style.cssText += colorStyle(candidate.block.color);
+  if (!segment || segment.first) preview.innerHTML = `<strong class="block-title">${escapeHtml(candidate.block.title)}</strong>`;
+  return preview;
+}
+
+function renderGroupDragPreview(plan) {
+  clearGroupDragPreview();
+  elements.timeline.classList.add("group-dragging");
+  for (const item of selectedItems()) renderedBlockElements(item.date, item.block.id).forEach((block) => block.classList.add("group-drag-source"));
+  for (const candidate of plan.candidates) {
+    if (!candidate.targetDate || candidate.block.start < DAY_START || candidate.block.end > DAY_END) continue;
+    if (usesHourGrid()) {
+      for (const segment of splitBlockIntoHourSegments(candidate.block)) {
+        const row = elements.timelineDays.querySelector(`[data-date="${candidate.targetDate}"] .hour-events[data-hour="${segment.hour}"]`);
+        if (!row) continue;
+        const preview = createGroupDragPreview(candidate, segment, !plan.ok);
+        preview.style.left = `${(segment.start / 60) * 100}%`;
+        preview.style.width = `${((segment.end - segment.start) / 60) * 100}%`;
+        row.append(preview);
+      }
+      continue;
+    }
+    const layer = elements.timelineDays.querySelector(`.blocks-layer[data-date="${candidate.targetDate}"]`);
+    if (!layer) continue;
+    const preview = createGroupDragPreview(candidate, null, !plan.ok);
+    preview.style.top = `${candidate.block.start * PIXELS_PER_MINUTE}px`;
+    preview.style.height = `${(candidate.block.end - candidate.block.start) * PIXELS_PER_MINUTE}px`;
+    layer.append(preview);
+  }
+}
+
+function startGroupPointerDrag(event) {
+  const article = event.currentTarget;
+  const key = blockSelectionKey(article.dataset.date, article.dataset.id);
+  if (!selectedBlockKeys.has(key)) return;
+  const items = selectedItems();
+  const dragged = items.find((item) => item.date === article.dataset.date && item.block.id === article.dataset.id);
+  if (!dragged) return;
+  const origin = { x: event.clientX, y: event.clientY };
+  const grabOffset = minuteAtPointer(event.clientY, event.clientX, article) - dragged.block.start;
+  let moved = false;
+  let lastTarget = null;
+  let lastPlan = null;
+  article.setPointerCapture(event.pointerId);
+
+  const move = (moveEvent) => {
+    if (!moved && !hasMovedBeyondTolerance(origin, { x: moveEvent.clientX, y: moveEvent.clientY }, moveEvent.pointerType === "touch" ? 6 : 3)) return;
+    if (!moved) {
+      moved = true;
+      ignoreBlockClickUntil = Date.now() + 700;
+      navigator.vibrate?.(6);
+    }
+    moveEvent.preventDefault();
+    lastTarget = targetForGroupDrag({
+      items,
+      draggedDate: dragged.date,
+      draggedBlockId: dragged.block.id,
+      pointerDate: dateAtPointer(moveEvent.clientX),
+      pointerMinute: minuteAtPointer(moveEvent.clientY, moveEvent.clientX, moveEvent.target),
+      grabOffset,
+      snapMinutes: state.settings.snapMinutes,
+    });
+    if (!lastTarget) return;
+    lastPlan = groupPlan("move", lastTarget.targetDate, lastTarget.targetStart);
+    renderGroupDragPreview(lastPlan);
+  };
+  const cleanup = () => {
+    clearGroupDragPreview();
+    article.removeEventListener("pointermove", move);
+    article.removeEventListener("pointerup", finish);
+    article.removeEventListener("pointercancel", cancel);
+  };
+  const finish = () => {
+    cleanup();
+    if (!moved || !lastTarget || !lastPlan) return;
+    if (!lastPlan.ok) {
+      markGroupConflicts(lastPlan);
+      showToast(lastPlan.conflicts.some((item) => item.reason === "boundary") ? "有时间块会超出当天范围，整组已放回原位" : "目标位置存在冲突，整组已放回原位");
+      return;
+    }
+    applyGroupOperation("move", lastTarget.targetDate, lastTarget.targetStart);
+  };
+  const cancel = () => { cleanup(); };
+  article.addEventListener("pointermove", move);
+  article.addEventListener("pointerup", finish);
+  article.addEventListener("pointercancel", cancel, { once: true });
 }
 
 function markGroupConflicts(plan) {
@@ -1122,7 +1231,7 @@ function applyGroupOperation(mode, targetDate, targetStart) {
   }
   selectionMode = false;
   selectedBlockKeys.clear();
-  elements.groupDialog.close();
+  if (elements.groupDialog.open) elements.groupDialog.close();
   commitChange(previous, mode === "copy" ? `已复制 ${plan.candidates.length} 个时间块` : `已移动 ${plan.candidates.length} 个时间块`);
   return true;
 }
@@ -1155,6 +1264,25 @@ function saveGroup(event) {
 function quickShift(minutes) {
   const [anchor] = selectedItems();
   if (anchor) applyGroupOperation("move", anchor.date, anchor.block.start + minutes);
+}
+
+function deleteSelection() {
+  const items = selectedItems();
+  if (!items.length) return;
+  const missingRule = items.find((item) => item.block.recurring && !state.rules.some((rule) => rule.id === item.block.sourceRuleId));
+  if (missingRule) { showToast("找不到对应的重复规则，未删除任何时间块"); return; }
+  const previous = cloneState();
+  for (const item of items) {
+    if (item.block.recurring) {
+      const rule = state.rules.find((entry) => entry.id === item.block.sourceRuleId);
+      state.recurrenceExceptions = upsertRecurrenceException(state.recurrenceExceptions, rule, item.block.recurrenceDate || item.date, { cancelled: true });
+    } else {
+      setManualBlocksForDate(item.date, manualBlocksForDate(item.date).filter((block) => block.id !== item.block.id));
+    }
+  }
+  selectionMode = false;
+  selectedBlockKeys.clear();
+  commitChange(previous, `已删除 ${items.length} 个时间块`);
 }
 
 function startPointerAdjustment(event) {
@@ -1285,7 +1413,7 @@ for (const [input, name, form] of [[elements.blockCustomColor, "blockColor", ele
 elements.selectionModeButton.addEventListener("click", () => { if (selectionMode) exitSelectionMode(); else enterSelectionMode(); });
 elements.cancelSelectionButton.addEventListener("click", () => exitSelectionMode());
 elements.copySelectionButton.addEventListener("click", () => openGroupDialog("copy"));
-elements.moveSelectionButton.addEventListener("click", () => openGroupDialog("move"));
+elements.deleteSelectionButton.addEventListener("click", deleteSelection);
 elements.shift15Button.addEventListener("click", () => quickShift(15));
 elements.shift30Button.addEventListener("click", () => quickShift(30));
 elements.groupForm.addEventListener("submit", saveGroup);

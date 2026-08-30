@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { planGroupTransform } from "../src/group.js";
+import { planGroupTransform, targetForGroupDrag } from "../src/group.js";
 
 const selected = [
   { date: "2026-08-30", block: { id: "a", title: "A", start: 540, end: 600, color: "sage", done: true } },
@@ -37,4 +37,21 @@ test("rejects the whole group on boundaries or external conflicts", () => {
   assert.ok(conflict.conflicts.length > 0);
   const boundary = planGroupTransform({ items: selected.slice(0, 2), targetDate: "2026-09-01", targetStart: 1400, mode: "move", existingByDate: {} });
   assert.equal(boundary.ok, false);
+});
+
+test("anchors a drag from any selected block without changing group spacing", () => {
+  assert.deepEqual(targetForGroupDrag({
+    items: selected,
+    draggedDate: "2026-08-31",
+    draggedBlockId: "r",
+    pointerDate: "2026-09-03",
+    pointerMinute: 672,
+    grabOffset: 12,
+    snapMinutes: 15,
+  }), { targetDate: "2026-09-02", targetStart: 630 });
+});
+
+test("rejects incomplete group drag coordinates", () => {
+  assert.equal(targetForGroupDrag({ items: selected, draggedDate: "2026-08-31", draggedBlockId: "missing", pointerDate: "2026-09-03", pointerMinute: 600 }), null);
+  assert.equal(targetForGroupDrag({ items: [], draggedDate: "2026-08-31", draggedBlockId: "r", pointerDate: "2026-09-03", pointerMinute: 600 }), null);
 });
