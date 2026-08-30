@@ -365,16 +365,17 @@ html.touch-selecting-page body { position: fixed; right: 0; left: 0; width: 100%
   .mobile-nav button { min-height: 54px; display: grid; place-items: center; align-content: center; gap: 2px; border: 0; border-radius: 10px; color: var(--muted); background: transparent; cursor: pointer; }
   .mobile-nav button.active { color: var(--ink); background: var(--surface-soft); }
   .mobile-nav span { font-size: .75rem; font-weight: 700; }
-  .action-picker { right: max(12px, env(safe-area-inset-right, 0px)) !important; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); left: max(12px, env(safe-area-inset-left, 0px)) !important; width: auto; max-height: calc(100vh - 104px); overflow-y: auto; }
-  .sheet-dialog { width: 100%; max-width: none; max-height: 92vh; margin: auto 0 0; border-radius: 18px 18px 0 0; }
-  .sheet-dialog form { padding: 20px 16px calc(20px + env(safe-area-inset-bottom, 0px)); }
+  .action-picker { top: 44%; right: auto !important; bottom: auto; left: 50% !important; width: min(420px, calc(100% - 24px)); max-width: calc(100% - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)); max-height: calc(100vh - 176px); max-height: calc(100dvh - 176px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); overflow-y: auto; transform: translate(-50%, -50%); }
+  .sheet-dialog { width: min(540px, calc(100% - 24px)); max-width: calc(100% - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)); max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); margin: auto; border-radius: 18px; }
+  .sheet-dialog form { padding: 20px 16px; }
   .field-row { grid-template-columns: 1fr 1fr; }
   .dialog-actions.split { grid-template-columns: 1fr 1fr; }
   .dialog-actions.content-dialog-actions { grid-template-columns: 1fr 1fr; }
   .dialog-actions.content-dialog-actions > span { display: none; }
   .dialog-actions.split > span { display: none; }
-  .toast { right: max(12px, env(safe-area-inset-right, 0px)); bottom: calc(84px + env(safe-area-inset-bottom, 0px)); left: max(12px, env(safe-area-inset-left, 0px)); justify-content: space-between; }
-  .selection-toolbar { right: max(8px, env(safe-area-inset-right, 0px)); bottom: calc(84px + env(safe-area-inset-bottom, 0px)); left: max(8px, env(safe-area-inset-left, 0px)); width: auto; max-width: none; min-height: 0; flex-wrap: wrap; justify-content: center; padding: 8px; }
+  .toast { top: calc(84px + env(safe-area-inset-top, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); bottom: auto; left: max(12px, env(safe-area-inset-left, 0px)); justify-content: space-between; transform: translateY(-12px); }
+  .toast.show { transform: translateY(0); }
+  .selection-toolbar { top: calc(84px + env(safe-area-inset-top, 0px)); right: max(8px, env(safe-area-inset-right, 0px)); bottom: auto; left: max(8px, env(safe-area-inset-left, 0px)); width: auto; max-width: none; min-height: 0; flex-wrap: wrap; justify-content: center; padding: 8px; }
   .selection-summary { width: 100%; justify-content: center; padding-right: 34px; }
   .selection-actions { width: 100%; justify-content: center; }
   .selection-toolbar .secondary-button, .selection-toolbar .primary-button, .selection-toolbar .danger-button { min-height: 44px; }
