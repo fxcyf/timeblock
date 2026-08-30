@@ -11,16 +11,18 @@
 
 - 零依赖响应式 Web 原型，使用原生 HTML、CSS 和 ECMAScript modules
 - `index.html` / `styles.css` / `app.js`：页面结构、视觉与交互状态
-- `src/schedule.js`：时间解析、冲突检测与空档；`src/recurrence.js`：重复实例、例外与规则拆分；`src/state.js`：V2 状态迁移；`src/calendar.js`：日期范围；`src/content.js`：常用内容；`src/gesture.js`：长按手势；`src/backup.js`：版本化 JSON 备份校验
+- `src/schedule.js`：时间解析、冲突检测与空档；`src/recurrence.js`：重复实例、移动例外与规则拆分；`src/state.js`：V2 状态迁移；`src/calendar.js`：日期范围；`src/content.js`：内容三态；`src/gesture.js`：长按手势；`src/grid.js`：小时格；`src/group.js`：整组变换；`src/forms.js`：显式表单校验；`src/theme.js`：颜色与对比度；`src/backup.js`：版本化 JSON 备份校验
 - `test/`：Node.js 原生测试；`scripts/serve.mjs`：本地静态服务器
 - 时间在领域层统一表示为当天分钟数，时间轴覆盖 00:00–24:00；支持 1 日、连续 3 日和周一开始的 7 日视图
-- 手动时间块按日期保存在 `blocksByDate`；重复实例由规则动态计算，只在单次修改、完成或取消时写入 `recurrenceExceptions`
+- 手动时间块按日期保存在 `blocksByDate`；重复实例由规则动态计算，只在单次修改、移动、完成或取消时写入 `recurrenceExceptions`，跨日期移动使用 `movedToDate` 保持规则归属
 - V2 状态写入浏览器 `localStorage` 的 `timeblock-state-v2`；自动迁移旧单日 `blocks`、V1 状态与已复制的重复时间块
 - 常驻界面采用文字最少化约定：只显示日期、时间、行动与必要数据，图标按钮必须保留可访问名称
 - 所有宽度的“日程”只保留日期范围控制和全宽 24 小时时间轴，不显示进度或辅助面板；桌面/平板使用时间轴内部滚动，移动端时间轴撑开页面并使用页面级滚动
-- 移动端在空白格长按后才进入划选，手指先移动则继续原生滚动；重复规则只在“重复”页管理
-- “管理”页支持常用内容新增、编辑、排序、移出常用和删除，并集中提供视图偏好、V2 JSON 导入导出与清空
-- 删除、移动、完成等可逆操作保留一次撤销；重复实例编辑/删除支持“仅这一次”和“这一次及以后”
+- 手机和平板的 1 日视图使用 24 行 × 4 个 15 分钟格；空白格长按后才进入划选，手指先移动则继续原生滚动；桌面单日及所有 3/7 日视图保持纵向时间轴
+- 内容状态为 `oneTime` / `favorite` / `archived`；旧 `favorite:false` 只迁移为 `oneTime`；“管理”页提供常用内容归档、恢复和删除
+- “管理”页集中提供强调色/自定义内容颜色、视图偏好、V3 JSON 备份导入导出与清空；应用本地状态仍为 V2、存储键不变
+- 日程工具栏固定在可见区域；多选复制/整体移动先整组校验边界和冲突，再原子保存并提供一次撤销
+- 重复表单只在保存时显式校验，关闭、取消和 Escape 无条件退出；重复实例编辑/删除支持“仅这一次”和“这一次及以后”
 - `.github/workflows/static.yml`：推送 `main` 后自动发布到 GitHub Pages
 
 ## 开发命令

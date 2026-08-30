@@ -23,34 +23,38 @@
       <symbol id="icon-upload" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M5 21h14"/></symbol>
       <symbol id="icon-up" viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></symbol>
       <symbol id="icon-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+      <symbol id="icon-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></symbol>
+      <symbol id="icon-move" viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M8 7l4-4 4 4M8 17l4 4 4-4M7 8l-4 4 4 4M17 8l4 4-4 4"/></symbol>
+      <symbol id="icon-archive" viewBox="0 0 24 24"><path d="M4 8h16v12H4zM3 4h18v4H3zM9 12h6"/></symbol>
     </svg>
 
     <div class="app-shell">
       <aside class="sidebar">
         <a class="brand" href="#today" aria-label="Timeblock 首页"><span class="brand-mark"><i></i><i></i><i></i></span></a>
         <nav class="main-nav" aria-label="主导航">
-          <button class="nav-item active" data-view="today" aria-label="日程"><svg><use href="#icon-timeline"></use></svg></button>
-          <button class="nav-item" data-view="recurring" aria-label="重复日程"><svg><use href="#icon-repeat"></use></svg></button>
-          <button class="nav-item" data-view="manage" aria-label="管理"><svg><use href="#icon-manage"></use></svg></button>
+          <button type="button" class="nav-item active" data-view="today" aria-label="日程"><svg><use href="#icon-timeline"></use></svg></button>
+          <button type="button" class="nav-item" data-view="recurring" aria-label="重复日程"><svg><use href="#icon-repeat"></use></svg></button>
+          <button type="button" class="nav-item" data-view="manage" aria-label="管理"><svg><use href="#icon-manage"></use></svg></button>
         </nav>
       </aside>
 
       <main class="main-content">
         <header class="topbar" id="topbar">
           <div class="date-navigation">
-            <button class="icon-button range-button previous" id="previousRangeButton" aria-label="上一日期范围"><svg><use href="#icon-chevron"></use></svg></button>
+            <button type="button" class="icon-button range-button previous" id="previousRangeButton" aria-label="上一日期范围"><svg><use href="#icon-chevron"></use></svg></button>
             <p id="dateEyebrow"></p>
-            <button class="icon-button range-button" id="nextRangeButton" aria-label="下一日期范围"><svg><use href="#icon-chevron"></use></svg></button>
+            <button type="button" class="icon-button range-button" id="nextRangeButton" aria-label="下一日期范围"><svg><use href="#icon-chevron"></use></svg></button>
           </div>
           <h1 class="sr-only" id="viewTitle">日程</h1>
           <div class="topbar-actions">
             <div class="view-range-control" aria-label="时间轴显示范围">
-              <button data-view-days="1" aria-label="显示一天">1 日</button>
-              <button data-view-days="3" aria-label="显示三天">3 日</button>
-              <button data-view-days="7" aria-label="显示一周">7 日</button>
+              <button type="button" data-view-days="1" aria-label="显示一天">1 日</button>
+              <button type="button" data-view-days="3" aria-label="显示三天">3 日</button>
+              <button type="button" data-view-days="7" aria-label="显示一周">7 日</button>
             </div>
-            <button class="icon-button today-control" id="todayButton" aria-label="回到今天">今</button>
-            <button class="icon-button" id="clearDoneButton" aria-label="清理当前范围内已完成的时间块"><svg><use href="#icon-trash"></use></svg></button>
+            <button type="button" class="icon-button today-control" id="todayButton" aria-label="回到今天">今</button>
+            <button class="secondary-button select-mode-button" id="selectionModeButton" type="button">选择</button>
+            <button type="button" class="icon-button" id="clearDoneButton" aria-label="清理当前范围内已完成的时间块"><svg><use href="#icon-trash"></use></svg></button>
           </div>
         </header>
 
@@ -69,7 +73,7 @@
         <section class="view content-view" id="recurringView" aria-labelledby="recurringTitle" hidden>
           <div class="section-heading">
             <div><span>每周节奏</span><h2 id="recurringTitle">重复日程</h2></div>
-            <button class="primary-button icon-button" id="newRuleButton" aria-label="新建重复日程"><svg><use href="#icon-plus"></use></svg></button>
+            <button type="button" class="primary-button icon-button" id="newRuleButton" aria-label="新建重复日程"><svg><use href="#icon-plus"></use></svg></button>
           </div>
           <div class="week-strip" id="weekStrip" aria-label="本周重复日程概览"></div>
           <div class="rule-list" id="ruleList"></div>
@@ -81,8 +85,24 @@
           </div>
 
           <section class="manage-section" aria-labelledby="favoritesTitle">
-            <div class="manage-heading"><div><h3 id="favoritesTitle">常用内容</h3><p>划选时间后会按这里的顺序出现</p></div><button class="secondary-button" id="newFavoriteButton"><svg><use href="#icon-plus"></use></svg>添加</button></div>
+            <div class="manage-heading"><div><h3 id="favoritesTitle">常用内容</h3><p>划选时间后会按这里的顺序出现</p></div><button type="button" class="secondary-button" id="newFavoriteButton"><svg><use href="#icon-plus"></use></svg>添加</button></div>
             <div class="content-library-list" id="eventContentLibrary"></div>
+          </section>
+
+          <section class="manage-section" aria-labelledby="archivedTitle">
+            <div class="manage-heading"><div><h3 id="archivedTitle">已归档</h3><p>可恢复为常用，或彻底删除</p></div></div>
+            <div class="content-library-list" id="archivedEventContentLibrary"></div>
+          </section>
+
+          <section class="manage-section" aria-labelledby="appearanceTitle">
+            <div class="manage-heading"><div><h3 id="appearanceTitle">外观</h3><p>强调色用于主按钮、选中态和键盘焦点</p></div></div>
+            <div class="accent-options" id="accentOptions" aria-label="强调色预设">
+              <button type="button" data-accent-color="#486f65" style="--swatch:#486f65" aria-label="深青"></button>
+              <button type="button" data-accent-color="#8b654f" style="--swatch:#8b654f" aria-label="暖棕"></button>
+              <button type="button" data-accent-color="#596d8b" style="--swatch:#596d8b" aria-label="灰蓝"></button>
+              <button type="button" data-accent-color="#765f7f" style="--swatch:#765f7f" aria-label="灰紫"></button>
+              <label class="accent-custom"><input id="accentCustomColor" type="color" value="#486f65" aria-label="自定义强调色" /><span>自定义</span></label>
+            </div>
           </section>
 
           <section class="manage-section" aria-labelledby="preferencesTitle">
@@ -96,10 +116,10 @@
           <section class="manage-section" aria-labelledby="dataTitle">
             <div class="manage-heading"><div><h3 id="dataTitle">本地数据</h3><p id="dataSummary"></p></div></div>
             <div class="data-actions">
-              <button class="secondary-button" id="exportDataButton"><svg><use href="#icon-download"></use></svg>导出 JSON</button>
-              <button class="secondary-button" id="importDataButton"><svg><use href="#icon-upload"></use></svg>导入 JSON</button>
+              <button type="button" class="secondary-button" id="exportDataButton"><svg><use href="#icon-download"></use></svg>导出 JSON</button>
+              <button type="button" class="secondary-button" id="importDataButton"><svg><use href="#icon-upload"></use></svg>导入 JSON</button>
               <input id="importDataFile" type="file" accept="application/json,.json" hidden />
-              <button class="danger-button" id="clearDataButton"><svg><use href="#icon-trash"></use></svg>清空全部数据</button>
+              <button type="button" class="danger-button" id="clearDataButton"><svg><use href="#icon-trash"></use></svg>清空全部数据</button>
             </div>
           </section>
         </section>
@@ -107,19 +127,19 @@
     </div>
 
     <nav class="mobile-nav" aria-label="移动端导航">
-      <button class="active" data-view="today" aria-label="日程"><svg><use href="#icon-timeline"></use></svg><span>日程</span></button>
-      <button data-view="recurring" aria-label="重复日程"><svg><use href="#icon-repeat"></use></svg><span>重复</span></button>
-      <button data-view="manage" aria-label="管理"><svg><use href="#icon-manage"></use></svg><span>管理</span></button>
+      <button type="button" class="active" data-view="today" aria-label="日程"><svg><use href="#icon-timeline"></use></svg><span>日程</span></button>
+      <button type="button" data-view="recurring" aria-label="重复日程"><svg><use href="#icon-repeat"></use></svg><span>重复</span></button>
+      <button type="button" data-view="manage" aria-label="管理"><svg><use href="#icon-manage"></use></svg><span>管理</span></button>
     </nav>
 
     <div class="action-picker" id="actionPicker" role="dialog" aria-labelledby="actionPickerTitle" hidden>
       <div class="action-picker-heading">
         <div><span id="selectedRange"></span><strong class="sr-only" id="actionPickerTitle">选择事件内容</strong></div>
-        <button id="closeActionPicker" aria-label="取消选择">×</button>
+        <button type="button" id="closeActionPicker" aria-label="取消选择">×</button>
       </div>
       <div id="contentListView">
         <div class="action-options" id="actionOptions"></div>
-        <button class="custom-action" id="newContentButton"><svg><use href="#icon-plus"></use></svg>新建一次性内容</button>
+        <button type="button" class="custom-action" id="newContentButton"><svg><use href="#icon-plus"></use></svg>新建一次性内容</button>
       </div>
       <form class="content-form" id="contentForm" hidden>
         <label class="picker-field"><span>名称</span><input id="contentTitle" maxlength="40" autocomplete="off" required /></label>
@@ -143,16 +163,20 @@
           <label><input type="radio" name="libraryContentColor" value="sage" /><span class="sage"></span></label>
           <label><input type="radio" name="libraryContentColor" value="blue" /><span class="blue"></span></label>
           <label><input type="radio" name="libraryContentColor" value="lilac" /><span class="lilac"></span></label>
+          <label><input type="radio" name="libraryContentColor" value="rose" /><span class="rose"></span></label>
+          <label><input type="radio" name="libraryContentColor" value="sand" /><span class="sand"></span></label>
+          <label><input type="radio" name="libraryContentColor" value="teal" /><span class="teal"></span></label>
+          <label><input type="radio" name="libraryContentColor" value="plum" /><span class="plum"></span></label>
+          <label class="custom-color-option"><input type="radio" name="libraryContentColor" value="custom" /><input id="libraryContentCustomColor" type="color" value="#b96d4e" aria-label="自定义内容颜色" /></label>
         </div></fieldset>
-        <label class="favorite-choice"><input id="libraryContentFavorite" type="checkbox" checked /><span>保留在常用列表</span></label>
         <div class="dialog-error" id="libraryContentError" role="alert"></div>
-        <div class="dialog-actions split"><button type="button" class="danger-button" id="deleteLibraryContentButton"><svg><use href="#icon-trash"></use></svg>删除</button><span></span><button type="button" class="secondary-button" id="cancelLibraryContentButton">取消</button><button type="submit" class="primary-button">保存</button></div>
+        <div class="dialog-actions split content-dialog-actions"><button type="button" class="archive-button" id="archiveLibraryContentButton"><svg><use href="#icon-archive"></use></svg>归档</button><button type="button" class="danger-button" id="deleteLibraryContentButton"><svg><use href="#icon-trash"></use></svg>删除</button><span></span><button type="button" class="secondary-button" id="cancelLibraryContentButton">取消</button><button type="submit" class="primary-button">保存</button></div>
       </form>
     </dialog>
 
     <dialog id="blockDialog" class="sheet-dialog">
       <form method="dialog" id="blockForm">
-        <div class="dialog-heading"><div><span id="blockDialogKicker">时间块</span><h2 id="blockDialogTitle">编辑安排</h2></div><button class="close-button" value="cancel" aria-label="关闭">×</button></div>
+        <div class="dialog-heading"><div><span id="blockDialogKicker">时间块</span><h2 id="blockDialogTitle">编辑安排</h2></div><button type="button" class="close-button" id="closeBlockButton" aria-label="关闭">×</button></div>
         <input type="hidden" id="blockId" /><input type="hidden" id="blockOriginalDate" />
         <label class="field"><span>要做什么</span><input id="blockTitle" required maxlength="40" /></label>
         <label class="field"><span>分类（可选）</span><input id="blockCategory" list="categoryOptions" maxlength="20" /></label>
@@ -166,34 +190,65 @@
           <label><input type="radio" name="blockColor" value="sage" /><span class="sage"></span></label>
           <label><input type="radio" name="blockColor" value="blue" /><span class="blue"></span></label>
           <label><input type="radio" name="blockColor" value="lilac" /><span class="lilac"></span></label>
+          <label><input type="radio" name="blockColor" value="rose" /><span class="rose"></span></label>
+          <label><input type="radio" name="blockColor" value="sand" /><span class="sand"></span></label>
+          <label><input type="radio" name="blockColor" value="teal" /><span class="teal"></span></label>
+          <label><input type="radio" name="blockColor" value="plum" /><span class="plum"></span></label>
+          <label class="custom-color-option"><input type="radio" name="blockColor" value="custom" /><input id="blockCustomColor" type="color" value="#b96d4e" aria-label="自定义时间块颜色" /></label>
         </div></fieldset>
         <fieldset class="scope-field" id="blockScopeField" hidden><legend>应用范围</legend><label><input type="radio" name="blockScope" value="one" checked /><span>仅这一次</span></label><label><input type="radio" name="blockScope" value="future" /><span>这一次及以后</span></label></fieldset>
         <div class="dialog-error" id="blockError" role="alert"></div>
-        <div class="dialog-actions split"><button type="button" class="danger-button" id="deleteBlockButton"><svg><use href="#icon-trash"></use></svg>删除</button><span></span><button value="cancel" class="secondary-button">取消</button><button type="submit" class="primary-button">保存</button></div>
+        <div class="dialog-actions split"><button type="button" class="danger-button" id="deleteBlockButton"><svg><use href="#icon-trash"></use></svg>删除</button><span></span><button type="button" class="secondary-button" id="cancelBlockButton">取消</button><button type="submit" class="primary-button">保存</button></div>
       </form>
     </dialog>
 
     <dialog id="ruleDialog" class="sheet-dialog">
-      <form method="dialog" id="ruleForm">
-        <div class="dialog-heading"><div><span>重复日程</span><h2 id="ruleDialogTitle">新建重复日程</h2></div><button class="close-button" value="cancel" aria-label="关闭">×</button></div>
+      <form method="dialog" id="ruleForm" novalidate>
+        <div class="dialog-heading"><div><span>重复日程</span><h2 id="ruleDialogTitle">新建重复日程</h2></div><button type="button" class="close-button" id="closeRuleButton" aria-label="关闭">×</button></div>
         <input type="hidden" id="ruleId" />
-        <label class="field"><span>名称</span><input id="ruleTitle" required maxlength="40" /></label>
+        <label class="field"><span>名称</span><input id="ruleTitle" maxlength="40" aria-describedby="ruleTitleError" /><small class="field-error" id="ruleTitleError"></small></label>
         <label class="field"><span>分类（可选）</span><input id="ruleCategory" list="categoryOptions" maxlength="20" /></label>
-        <div class="field-row"><label class="field"><span>开始时间</span><input id="ruleStart" type="time" required /></label><label class="field"><span>持续时长</span><input id="ruleDuration" type="number" min="5" max="1440" step="5" required /></label></div>
-        <fieldset class="days-field"><legend>重复日期</legend><div class="day-options" id="dayOptions"></div></fieldset>
-        <div class="field-row"><label class="field"><span>生效日期</span><input id="ruleStartDate" type="date" required /></label><label class="field"><span>结束日期（可选）</span><input id="ruleEndDate" type="date" /></label></div>
+        <div class="field-row"><label class="field"><span>开始时间</span><input id="ruleStart" type="time" aria-describedby="ruleStartError" /><small class="field-error" id="ruleStartError"></small></label><label class="field"><span>持续时长</span><input id="ruleDuration" type="number" min="5" max="1440" step="5" aria-describedby="ruleDurationError" /><small class="field-error" id="ruleDurationError"></small></label></div>
+        <fieldset class="days-field"><legend>重复日期</legend><div class="day-options" id="dayOptions"></div><small class="field-error" id="ruleDaysError"></small></fieldset>
+        <div class="field-row"><label class="field"><span>生效日期</span><input id="ruleStartDate" type="date" aria-describedby="ruleStartDateError" /><small class="field-error" id="ruleStartDateError"></small></label><label class="field"><span>结束日期（可选）</span><input id="ruleEndDate" type="date" aria-describedby="ruleEndDateError" /><small class="field-error" id="ruleEndDateError"></small></label></div>
         <fieldset class="color-field"><legend>颜色</legend><div class="color-options">
           <label><input type="radio" name="ruleColor" value="apricot" checked /><span class="apricot"></span></label>
           <label><input type="radio" name="ruleColor" value="sage" /><span class="sage"></span></label>
           <label><input type="radio" name="ruleColor" value="blue" /><span class="blue"></span></label>
           <label><input type="radio" name="ruleColor" value="lilac" /><span class="lilac"></span></label>
+          <label><input type="radio" name="ruleColor" value="rose" /><span class="rose"></span></label>
+          <label><input type="radio" name="ruleColor" value="sand" /><span class="sand"></span></label>
+          <label><input type="radio" name="ruleColor" value="teal" /><span class="teal"></span></label>
+          <label><input type="radio" name="ruleColor" value="plum" /><span class="plum"></span></label>
+          <label class="custom-color-option"><input type="radio" name="ruleColor" value="custom" /><input id="ruleCustomColor" type="color" value="#55704f" aria-label="自定义重复日程颜色" /></label>
         </div></fieldset>
         <div class="dialog-error" id="ruleError" role="alert"></div>
-        <div class="dialog-actions split"><button type="button" class="danger-button" id="deleteRuleButton"><svg><use href="#icon-trash"></use></svg>删除规则</button><span></span><button value="cancel" class="secondary-button">取消</button><button type="submit" class="primary-button">保存</button></div>
+        <div class="dialog-actions split"><button type="button" class="danger-button" id="deleteRuleButton"><svg><use href="#icon-trash"></use></svg>删除规则</button><span></span><button type="button" class="secondary-button" id="cancelRuleButton">取消</button><button type="submit" class="primary-button">保存</button></div>
       </form>
     </dialog>
 
-    <div class="toast" id="toast" role="status" aria-live="polite"><span></span><button id="undoButton" hidden>撤销</button></div>
+    <div class="selection-toolbar" id="selectionToolbar" hidden role="toolbar" aria-label="批量操作">
+      <strong id="selectionCount">已选 0 项</strong>
+      <button type="button" class="secondary-button" id="shift15Button">+15</button>
+      <button type="button" class="secondary-button" id="shift30Button">+30</button>
+      <button type="button" class="secondary-button" id="copySelectionButton"><svg><use href="#icon-copy"></use></svg>复制</button>
+      <button type="button" class="primary-button" id="moveSelectionButton"><svg><use href="#icon-move"></use></svg>整体移动</button>
+      <button type="button" class="icon-button" id="cancelSelectionButton" aria-label="退出选择">×</button>
+    </div>
+
+    <dialog id="groupDialog" class="sheet-dialog">
+      <form method="dialog" id="groupForm" novalidate>
+        <div class="dialog-heading"><div><span>批量操作</span><h2 id="groupDialogTitle">整体移动</h2></div><button type="button" class="close-button" id="closeGroupButton" aria-label="关闭">×</button></div>
+        <input type="hidden" id="groupMode" />
+        <label class="field"><span>目标日期</span><input id="groupDate" type="date" /></label>
+        <label class="field"><span>最早一项的开始时间</span><input id="groupStart" type="time" /></label>
+        <p class="group-help">其他时间块会保持原有日期差、时间差和时长。</p>
+        <div class="dialog-error" id="groupError" role="alert"></div>
+        <div class="dialog-actions end"><button type="button" class="secondary-button" id="cancelGroupButton">取消</button><button type="submit" class="primary-button">确认</button></div>
+      </form>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"><span></span><button type="button" id="undoButton" hidden>撤销</button></div>
     <script type="module" src="app.js"></script>
   </body>
 </html>

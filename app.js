@@ -8,11 +8,14 @@ import {
   sortBlocks,
 } from "./src/schedule.js";
 import {
+  archiveEventContent,
+  archivedEventContents,
   colorForEventContent,
   eventContentCategories,
   favoriteEventContents,
   moveEventContent,
   removeEventContent,
+  restoreEventContent,
   updateEventContent,
   upsertEventContent,
 } from "./src/content.js";
@@ -20,6 +23,10 @@ import { addDateKeyDays, dateFromKey, visibleDateKeys as buildVisibleDateKeys } 
 import { hasMovedBeyondTolerance } from "./src/gesture.js";
 import { createBackup, parseBackup } from "./src/backup.js";
 import { migrateAppState } from "./src/state.js";
+import { validateRuleDraft } from "./src/forms.js";
+import { gridCellAtPoint, gridSelectionRange, splitBlockIntoHourSegments } from "./src/grid.js";
+import { planGroupTransform } from "./src/group.js";
+import { COLOR_PRESETS, colorTokens, normalizeColorValue, resolveColor } from "./src/theme.js";
 import {
   materializeRecurringForDate,
   rulesConflictInRange,
@@ -38,8 +45,7 @@ const LEGACY_STORAGE_KEY = "timeblock-state-v1";
 const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
 const DAY_NAMES = ["日", "一", "二", "三", "四", "五", "六"];
 const FULL_DAY_NAMES = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
-const COLORS = ["apricot", "sage", "blue", "lilac"];
-const COLOR_VALUES = { apricot: "#a85f40", sage: "#55704f", blue: "#4f7187", lilac: "#715c82" };
+const COLORS = Object.keys(COLOR_PRESETS);
 
 const defaultRules = [
   { id: "dinner", title: "晚餐 & 放空", category: "用餐", start: 19 * 60, duration: 45, days: [0, 1, 2, 3, 4, 5, 6], startDate: "2000-01-01", endDate: null, color: "apricot", enabled: true, inactiveRanges: [] },
@@ -48,10 +54,10 @@ const defaultRules = [
 ];
 
 const defaultEventContents = [
-  { id: "content-dinner", title: "晚餐 & 放空", category: "用餐", favorite: true, color: "apricot", sortOrder: 0 },
-  { id: "content-workout", title: "运动一下", category: "健康", favorite: true, color: "sage", sortOrder: 1 },
-  { id: "content-reading", title: "安静阅读", category: "兴趣", favorite: true, color: "blue", sortOrder: 2 },
-  { id: "content-wind-down", title: "洗澡 & 收拾", category: "生活", favorite: true, color: "lilac", sortOrder: 3 },
+  { id: "content-dinner", title: "晚餐 & 放空", category: "用餐", status: "favorite", color: "apricot", sortOrder: 0 },
+  { id: "content-workout", title: "运动一下", category: "健康", status: "favorite", color: "sage", sortOrder: 1 },
+  { id: "content-reading", title: "安静阅读", category: "兴趣", status: "favorite", color: "blue", sortOrder: 2 },
+  { id: "content-wind-down", title: "洗澡 & 收拾", category: "生活", status: "favorite", color: "lilac", sortOrder: 3 },
 ];
 
 let now = new Date();
@@ -68,9 +74,12 @@ let selectionPoint = null;
 let touchSelection = null;
 let touchPageScrollPosition = null;
 let suppressContextMenuUntil = 0;
+let selectionMode = false;
+let selectedBlockKeys = new Set();
+let lastHourGridMode = null;
 
 const elements = Object.fromEntries([
-  "actionOptions", "actionPicker", "blockCategory", "blockDate", "blockDialog", "blockDialogKicker", "blockDialogTitle", "blockEnd", "blockError", "blockForm", "blockId", "blockOriginalDate", "blockScopeField", "blockStart", "blockTitle", "cancelContentButton", "cancelLibraryContentButton", "categoryOptions", "clearDataButton", "clearDoneButton", "closeActionPicker", "closeLibraryContentButton", "contentCategory", "contentError", "contentFavorite", "contentForm", "contentListView", "contentTitle", "dataSummary", "dateEyebrow", "dayOptions", "defaultViewSetting", "deleteBlockButton", "deleteLibraryContentButton", "deleteRuleButton", "eventContentLibrary", "exportDataButton", "importDataButton", "importDataFile", "libraryContentCategory", "libraryContentDialog", "libraryContentDialogTitle", "libraryContentError", "libraryContentFavorite", "libraryContentForm", "libraryContentId", "libraryContentTitle", "manageView", "newContentButton", "newFavoriteButton", "newRuleButton", "nextRangeButton", "previousRangeButton", "recurringView", "ruleCategory", "ruleDialog", "ruleDialogTitle", "ruleDuration", "ruleEndDate", "ruleError", "ruleForm", "ruleId", "ruleList", "ruleStart", "ruleStartDate", "ruleTitle", "selectedRange", "snapSetting", "timeAxis", "timeline", "timelineDays", "timelineHeaders", "timelineScroll", "toast", "todayButton", "todayView", "topbar", "undoButton", "viewTitle", "weekStrip",
+  "accentCustomColor", "accentOptions", "actionOptions", "actionPicker", "archiveLibraryContentButton", "archivedEventContentLibrary", "blockCategory", "blockCustomColor", "blockDate", "blockDialog", "blockDialogKicker", "blockDialogTitle", "blockEnd", "blockError", "blockForm", "blockId", "blockOriginalDate", "blockScopeField", "blockStart", "blockTitle", "cancelBlockButton", "cancelContentButton", "cancelGroupButton", "cancelLibraryContentButton", "cancelRuleButton", "cancelSelectionButton", "categoryOptions", "clearDataButton", "clearDoneButton", "closeActionPicker", "closeBlockButton", "closeGroupButton", "closeLibraryContentButton", "closeRuleButton", "contentCategory", "contentError", "contentFavorite", "contentForm", "contentListView", "contentTitle", "copySelectionButton", "dataSummary", "dateEyebrow", "dayOptions", "defaultViewSetting", "deleteBlockButton", "deleteLibraryContentButton", "deleteRuleButton", "eventContentLibrary", "exportDataButton", "groupDate", "groupDialog", "groupDialogTitle", "groupError", "groupForm", "groupMode", "groupStart", "importDataButton", "importDataFile", "libraryContentCategory", "libraryContentCustomColor", "libraryContentDialog", "libraryContentDialogTitle", "libraryContentError", "libraryContentForm", "libraryContentId", "libraryContentTitle", "manageView", "moveSelectionButton", "newContentButton", "newFavoriteButton", "newRuleButton", "nextRangeButton", "previousRangeButton", "recurringView", "ruleCategory", "ruleCustomColor", "ruleDialog", "ruleDialogTitle", "ruleDuration", "ruleEndDate", "ruleError", "ruleForm", "ruleId", "ruleList", "ruleStart", "ruleStartDate", "ruleTitle", "selectedRange", "selectionCount", "selectionModeButton", "selectionToolbar", "shift15Button", "shift30Button", "snapSetting", "timeAxis", "timeline", "timelineDays", "timelineHeaders", "timelineScroll", "toast", "todayButton", "todayView", "topbar", "undoButton", "viewTitle", "weekStrip",
 ].map((id) => [id, document.querySelector(`#${id}`)]));
 
 function toDateKey(date) {
@@ -109,7 +118,40 @@ function escapeHtml(value) {
 }
 
 function safeColor(color, fallback = "apricot") {
-  return COLORS.includes(color) ? color : fallback;
+  return normalizeColorValue(color, fallback);
+}
+
+function colorStyle(color, prefix = "block") {
+  const tokens = colorTokens(resolveColor(color, "apricot"));
+  return `--${prefix}-color:${tokens.soft};--${prefix}-deep:${tokens.deep}`;
+}
+
+function setColorChoice(form, name, customInput, color, fallback = "apricot") {
+  const normalized = safeColor(color, fallback);
+  const preset = COLORS.includes(normalized);
+  const radio = form.querySelector(`[name="${name}"][value="${preset ? normalized : "custom"}"]`);
+  if (radio) radio.checked = true;
+  if (!preset && customInput) customInput.value = resolveColor(normalized, fallback);
+}
+
+function readColorChoice(form, name, customInput, fallback = "apricot") {
+  const value = form.querySelector(`[name="${name}"]:checked`)?.value;
+  return value === "custom" ? safeColor(customInput?.value, fallback) : safeColor(value, fallback);
+}
+
+function applyTheme() {
+  const tokens = colorTokens(state.settings.accentColor);
+  const root = document.documentElement.style;
+  root.setProperty("--accent", tokens.accent);
+  root.setProperty("--on-accent", tokens.onAccent);
+  root.setProperty("--accent-soft", tokens.soft);
+  root.setProperty("--accent-dark", tokens.deep);
+  root.setProperty("--focus-ring", tokens.focus);
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", tokens.soft);
+}
+
+function usesHourGrid() {
+  return viewDayCount === 1 && window.matchMedia("(max-width: 1024px)").matches;
 }
 
 function showToast(message, snapshot = null) {
@@ -181,17 +223,20 @@ function renderDate() {
 
 function renderTimelineFrame() {
   const keys = visibleDateKeys();
-  elements.timeline.style.height = `${DAY_END * PIXELS_PER_MINUTE}px`;
-  elements.timeline.className = `timeline timeline-view-${viewDayCount}`;
+  const hourGrid = usesHourGrid();
+  lastHourGridMode = hourGrid;
+  elements.timeline.style.height = hourGrid ? "auto" : `${DAY_END * PIXELS_PER_MINUTE}px`;
+  elements.timeline.className = `timeline timeline-view-${viewDayCount}${hourGrid ? " hour-grid-mode" : ""}`;
   elements.timeline.style.setProperty("--view-days", String(viewDayCount));
   elements.timelineHeaders.style.setProperty("--view-days", String(viewDayCount));
+  elements.timelineHeaders.hidden = hourGrid;
   elements.timelineHeaders.innerHTML = `<span class="header-axis"></span>${keys.map((dateKey) => {
     const parts = dateParts(dateKey);
     return `<div class="day-header${dateKey === todayDateKey ? " today" : ""}"><span>${DAY_NAMES[parts.weekday]}</span><strong>${parts.day}</strong></div>`;
   }).join("")}`;
 
   elements.timeAxis.innerHTML = "";
-  for (let minute = DAY_START; minute <= DAY_END; minute += 60) {
+  for (let minute = DAY_START; !hourGrid && minute <= DAY_END; minute += 60) {
     const label = document.createElement("span");
     label.className = `axis-label${minute === DAY_START ? " edge-start" : ""}${minute === DAY_END ? " edge-end" : ""}`;
     label.style.top = `${minute * PIXELS_PER_MINUTE}px`;
@@ -199,70 +244,108 @@ function renderTimelineFrame() {
     elements.timeAxis.append(label);
   }
 
-  elements.timelineDays.innerHTML = keys.map((dateKey) => {
+  elements.timelineDays.innerHTML = hourGrid ? keys.map((dateKey) => {
+    const rows = Array.from({ length: 24 }, (_, hour) => `<div class="hour-row" data-hour="${hour}"><span class="hour-label">${String(hour).padStart(2, "0")}:00</span><div class="quarter-grid">${[0, 15, 30, 45].map((minute) => `<span class="quarter-cell" data-minute="${hour * 60 + minute}" aria-hidden="true"></span>`).join("")}</div><div class="hour-events" data-hour="${hour}"></div></div>`).join("");
+    return `<section class="day-column hour-day" data-date="${dateKey}" aria-label="${dateKey}">${rows}<div class="hour-day-end">24:00</div></section>`;
+  }).join("") : keys.map((dateKey) => {
     const lines = [];
     for (let minute = DAY_START; minute <= DAY_END; minute += 30) lines.push(`<span class="grid-line${minute % 60 ? " half" : ""}" style="top:${minute * PIXELS_PER_MINUTE}px"></span>`);
     return `<section class="day-column" data-date="${dateKey}" aria-label="${dateKey}"><div class="day-grid">${lines.join("")}</div><div class="now-line" ${dateKey === todayDateKey ? "" : "hidden"}><span class="sr-only">现在</span></div><div class="blocks-layer" data-date="${dateKey}"></div><div class="draft-selection" hidden aria-live="polite"><span class="selection-time"></span></div></section>`;
   }).join("");
-  const nowLine = elements.timelineDays.querySelector(`[data-date="${todayDateKey}"] .now-line`);
+  const nowLine = !hourGrid && elements.timelineDays.querySelector(`[data-date="${todayDateKey}"] .now-line`);
   if (nowLine) nowLine.style.top = `${(now.getHours() * 60 + now.getMinutes()) * PIXELS_PER_MINUTE}px`;
+}
+
+function blockSelectionKey(dateKey, id) {
+  return `${dateKey}|${id}`;
+}
+
+function configureBlockArticle(article, block, dateKey, segment = null) {
+  const selected = selectedBlockKeys.has(blockSelectionKey(dateKey, block.id));
+  article.className = `time-block${segment ? " hour-segment" : ""}${block.done ? " done" : ""}${block.end - block.start <= 30 ? " compact" : ""}${selected ? " selected" : ""}`;
+  article.dataset.id = block.id;
+  article.dataset.date = dateKey;
+  article.dataset.recurring = block.recurring ? "true" : "false";
+  article.style.cssText += colorStyle(block.color);
+  article.tabIndex = 0;
+  article.setAttribute("role", "button");
+  article.setAttribute("aria-pressed", selectionMode ? String(selected) : "false");
+  article.setAttribute("aria-label", `${block.category ? `${block.category}，` : ""}${block.title}，${dateKey} ${formatTime(block.start)} 到 ${displayScheduleTime(block.end)}${selectionMode ? "，点击选择" : "，点击编辑"}`);
+  const showMeta = !segment || segment.first;
+  const showCheck = !segment || segment.first;
+  article.innerHTML = `${showMeta ? `<span class="block-meta"><span>${formatTime(block.start)} — ${displayScheduleTime(block.end)}</span>${block.category ? `<span class="block-category">${escapeHtml(block.category)}</span>` : ""}</span>` : ""}<strong class="block-title">${escapeHtml(block.title)}</strong>${showCheck ? `<button type="button" class="block-check" aria-label="${block.done ? "标记为未完成" : "标记为已完成"}"><svg><use href="#icon-check"></use></svg></button>` : ""}${segment ? "" : '<span class="resize-handle" aria-hidden="true"></span>'}`;
+  article.addEventListener("click", (event) => {
+    if (Date.now() < ignoreBlockClickUntil || event.target.closest(".block-check")) return;
+    if (selectionMode) toggleBlockSelection(dateKey, block.id);
+    else openBlockDialog(block.id, dateKey);
+  });
+  article.addEventListener("keydown", (event) => {
+    if (event.target !== article || !["Enter", " "].includes(event.key)) return;
+    event.preventDefault();
+    if (selectionMode) toggleBlockSelection(dateKey, block.id);
+    else openBlockDialog(block.id, dateKey);
+  });
+  article.querySelector(".block-check")?.addEventListener("click", (event) => { event.stopPropagation(); toggleDone(block.id, dateKey); });
+  article.addEventListener("pointerdown", startBlockPointerInteraction);
 }
 
 function renderBlocks() {
   for (const dateKey of visibleDateKeys()) {
     const layer = elements.timelineDays.querySelector(`.blocks-layer[data-date="${dateKey}"]`);
-    if (!layer) continue;
     for (const block of blocksForDate(dateKey)) {
       if (block.end <= DAY_START || block.start >= DAY_END) continue;
-      const article = document.createElement("article");
-      article.className = `time-block ${safeColor(block.color)}${block.done ? " done" : ""}${block.end - block.start <= 30 ? " compact" : ""}`;
-      article.dataset.id = block.id;
-      article.dataset.date = dateKey;
-      article.dataset.recurring = block.recurring ? "true" : "false";
-      article.style.top = `${block.start * PIXELS_PER_MINUTE}px`;
-      article.style.height = `${(block.end - block.start) * PIXELS_PER_MINUTE}px`;
-      article.tabIndex = 0;
-      article.setAttribute("role", "button");
-      article.setAttribute("aria-label", `${block.category ? `${block.category}，` : ""}${block.title}，${dateKey} ${formatTime(block.start)} 到 ${displayScheduleTime(block.end)}，点击编辑`);
-      article.innerHTML = `<span class="block-meta"><span>${formatTime(block.start)} — ${displayScheduleTime(block.end)}</span>${block.category ? `<span class="block-category">${escapeHtml(block.category)}</span>` : ""}</span><strong class="block-title">${escapeHtml(block.title)}</strong><button class="block-check" aria-label="${block.done ? "标记为未完成" : "标记为已完成"}"><svg><use href="#icon-check"></use></svg></button><span class="resize-handle" aria-hidden="true"></span>`;
-      article.addEventListener("click", (event) => {
-        if (Date.now() < ignoreBlockClickUntil || event.target.closest(".block-check")) return;
-        openBlockDialog(block.id, dateKey);
-      });
-      article.addEventListener("keydown", (event) => {
-        if (event.target === article && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); openBlockDialog(block.id, dateKey); }
-      });
-      article.querySelector(".block-check").addEventListener("click", (event) => { event.stopPropagation(); toggleDone(block.id, dateKey); });
-      article.addEventListener("pointerdown", startPointerAdjustment);
-      layer.append(article);
+      if (usesHourGrid()) {
+        for (const segment of splitBlockIntoHourSegments(block)) {
+          const row = elements.timelineDays.querySelector(`[data-date="${dateKey}"] .hour-events[data-hour="${segment.hour}"]`);
+          if (!row) continue;
+          const article = document.createElement("article");
+          configureBlockArticle(article, block, dateKey, segment);
+          article.style.left = `${(segment.start / 60) * 100}%`;
+          article.style.width = `${((segment.end - segment.start) / 60) * 100}%`;
+          article.classList.toggle("segment-first", segment.first);
+          article.classList.toggle("segment-last", segment.last);
+          row.append(article);
+        }
+      } else if (layer) {
+        const article = document.createElement("article");
+        configureBlockArticle(article, block, dateKey);
+        article.style.top = `${block.start * PIXELS_PER_MINUTE}px`;
+        article.style.height = `${(block.end - block.start) * PIXELS_PER_MINUTE}px`;
+        layer.append(article);
+      }
     }
   }
+  renderSelectionToolbar();
 }
 
 function renderEventContents() {
   const favorites = favoriteEventContents(state.eventContents);
+  const archived = archivedEventContents(state.eventContents);
   elements.categoryOptions.innerHTML = eventContentCategories(state.eventContents).map((category) => `<option value="${escapeHtml(category)}"></option>`).join("");
-  elements.actionOptions.innerHTML = favorites.length ? favorites.map((content) => `<button data-event-content-id="${escapeHtml(content.id)}" style="--action-color:var(--${safeColor(content.color)}-deep)"><span class="action-dot"></span><span class="action-copy"><strong>${escapeHtml(content.title)}</strong>${content.category ? `<small>${escapeHtml(content.category)}</small>` : ""}</span><svg><use href="#icon-arrow"></use></svg></button>`).join("") : '<p class="empty-content">还没有常用内容</p>';
-  elements.eventContentLibrary.innerHTML = favorites.length ? favorites.map((content, index) => `<div class="content-library-item"><i class="${safeColor(content.color)}" aria-hidden="true"></i><span class="content-library-copy"><strong>${escapeHtml(content.title)}</strong><small>${escapeHtml(content.category || "未分类")}</small></span><span class="order-actions"><button data-move-content="${escapeHtml(content.id)}" data-direction="-1" aria-label="上移${escapeHtml(content.title)}" ${index === 0 ? "disabled" : ""}><svg><use href="#icon-up"></use></svg></button><button data-move-content="${escapeHtml(content.id)}" data-direction="1" aria-label="下移${escapeHtml(content.title)}" ${index === favorites.length - 1 ? "disabled" : ""}><svg><use href="#icon-down"></use></svg></button></span><button class="edit-content-button" data-edit-event-content="${escapeHtml(content.id)}" aria-label="编辑${escapeHtml(content.title)}"><svg><use href="#icon-chevron"></use></svg></button></div>`).join("") : '<p class="empty-state">还没有常用内容。添加后，划选时间时就能直接使用。</p>';
+  elements.actionOptions.innerHTML = favorites.length ? favorites.map((content) => `<button type="button" data-event-content-id="${escapeHtml(content.id)}" style="--action-color:${colorTokens(resolveColor(content.color)).deep}"><span class="action-dot"></span><span class="action-copy"><strong>${escapeHtml(content.title)}</strong>${content.category ? `<small>${escapeHtml(content.category)}</small>` : ""}</span><svg><use href="#icon-arrow"></use></svg></button>`).join("") : '<p class="empty-content">还没有常用内容</p>';
+  elements.eventContentLibrary.innerHTML = favorites.length ? favorites.map((content, index) => `<div class="content-library-item"><i style="--content-color:${colorTokens(resolveColor(content.color)).deep}" aria-hidden="true"></i><span class="content-library-copy"><strong>${escapeHtml(content.title)}</strong><small>${escapeHtml(content.category || "未分类")}</small></span><span class="order-actions"><button type="button" data-move-content="${escapeHtml(content.id)}" data-direction="-1" aria-label="上移${escapeHtml(content.title)}" ${index === 0 ? "disabled" : ""}><svg><use href="#icon-up"></use></svg></button><button type="button" data-move-content="${escapeHtml(content.id)}" data-direction="1" aria-label="下移${escapeHtml(content.title)}" ${index === favorites.length - 1 ? "disabled" : ""}><svg><use href="#icon-down"></use></svg></button></span><button type="button" class="edit-content-button" data-edit-event-content="${escapeHtml(content.id)}" aria-label="编辑${escapeHtml(content.title)}"><svg><use href="#icon-chevron"></use></svg></button></div>`).join("") : '<p class="empty-state">还没有常用内容。添加后，划选时间时就能直接使用。</p>';
+  elements.archivedEventContentLibrary.innerHTML = archived.length ? archived.map((content) => `<div class="content-library-item archived-item"><i style="--content-color:${colorTokens(resolveColor(content.color)).deep}" aria-hidden="true"></i><span class="content-library-copy"><strong>${escapeHtml(content.title)}</strong><small>${escapeHtml(content.category || "未分类")}</small></span><span class="archived-actions"><button type="button" class="secondary-button" data-restore-content="${escapeHtml(content.id)}">恢复</button><button type="button" class="danger-button icon-button" data-delete-archived-content="${escapeHtml(content.id)}" aria-label="彻底删除${escapeHtml(content.title)}"><svg><use href="#icon-trash"></use></svg></button></span></div>`).join("") : '<p class="empty-state compact-empty">暂无归档内容</p>';
 }
 
 function renderWeekStrip() {
   elements.weekStrip.innerHTML = buildVisibleDateKeys(todayDateKey, 7).map((dateKey) => {
     const parts = dateParts(dateKey);
     const instances = recurringBlocksForDate(dateKey);
-    return `<div class="week-day${dateKey === todayDateKey ? " today" : ""}"><span>${FULL_DAY_NAMES[parts.weekday]}</span><strong>${parts.day}</strong><div class="week-marks">${instances.map((block) => `<i style="--mark-color:${COLOR_VALUES[safeColor(block.color)]}"></i>`).join("")}</div></div>`;
+    return `<div class="week-day${dateKey === todayDateKey ? " today" : ""}"><span>${FULL_DAY_NAMES[parts.weekday]}</span><strong>${parts.day}</strong><div class="week-marks">${instances.map((block) => `<i style="--mark-color:${colorTokens(resolveColor(block.color)).deep}"></i>`).join("")}</div></div>`;
   }).join("");
 }
 
 function renderRuleList() {
-  elements.ruleList.innerHTML = state.rules.length ? state.rules.map((rule) => `<article class="rule-card${rule.enabled ? "" : " disabled"}" style="--rule-color:${COLOR_VALUES[safeColor(rule.color, "sage")]}"><span class="rule-color"></span><div class="rule-main"><strong>${escapeHtml(rule.title)}</strong><span class="rule-meta">${formatTime(rule.start)} · ${formatDuration(rule.duration)}${rule.endDate ? ` · 至 ${escapeHtml(rule.endDate)}` : ""}</span></div><div class="day-chips" aria-label="重复日期">${DAY_ORDER.map((day) => `<span class="${rule.days.includes(day) ? "on" : ""}">${DAY_NAMES[day]}</span>`).join("")}</div><div class="rule-actions"><button class="rule-edit" data-edit-rule="${escapeHtml(rule.id)}">编辑</button><label class="switch" aria-label="${rule.enabled ? "暂停" : "启用"}${escapeHtml(rule.title)}"><input type="checkbox" data-toggle-rule="${escapeHtml(rule.id)}" ${rule.enabled ? "checked" : ""} /><span></span></label></div></article>`).join("") : '<p class="empty-state">还没有重复日程。创建后，它会按规则动态出现在时间轴上。</p>';
+  elements.ruleList.innerHTML = state.rules.length ? state.rules.map((rule) => `<article class="rule-card${rule.enabled ? "" : " disabled"}" style="--rule-color:${colorTokens(resolveColor(rule.color, "sage")).deep}"><span class="rule-color"></span><div class="rule-main"><strong>${escapeHtml(rule.title)}</strong><span class="rule-meta">${formatTime(rule.start)} · ${formatDuration(rule.duration)}${rule.endDate ? ` · 至 ${escapeHtml(rule.endDate)}` : ""}</span></div><div class="day-chips" aria-label="重复日期">${DAY_ORDER.map((day) => `<span class="${rule.days.includes(day) ? "on" : ""}">${DAY_NAMES[day]}</span>`).join("")}</div><div class="rule-actions"><button type="button" class="rule-edit" data-edit-rule="${escapeHtml(rule.id)}">编辑</button><label class="switch" aria-label="${rule.enabled ? "暂停" : "启用"}${escapeHtml(rule.title)}"><input type="checkbox" data-toggle-rule="${escapeHtml(rule.id)}" ${rule.enabled ? "checked" : ""} /><span></span></label></div></article>`).join("") : '<p class="empty-state">还没有重复日程。创建后，它会按规则动态出现在时间轴上。</p>';
 }
 
 function renderManagement() {
   const manualCount = Object.values(state.blocksByDate).flat().length;
-  elements.dataSummary.textContent = `${manualCount} 个手动时间块 · ${state.rules.length} 条重复规则 · ${state.eventContents.length} 条内容`;
+  elements.dataSummary.textContent = `${manualCount} 个手动时间块 · ${state.rules.length} 条重复规则 · ${favoriteEventContents(state.eventContents).length} 个常用内容`;
   elements.defaultViewSetting.value = String(state.settings.viewDayCount);
   elements.snapSetting.value = String(state.settings.snapMinutes);
+  elements.accentCustomColor.value = resolveColor(state.settings.accentColor, "#486f65");
+  elements.accentOptions.querySelectorAll("[data-accent-color]").forEach((button) => button.classList.toggle("active", button.dataset.accentColor === state.settings.accentColor));
 }
 
 function usesPageTimelineScroll() {
@@ -293,6 +376,10 @@ function scrollTimelineToOffset(offset) {
   restoreTimelineScrollPosition(usesPageTimelineScroll() ? timelineDocumentTop() + offset : offset);
 }
 
+function timelineOffsetForMinute(minute) {
+  return usesHourGrid() ? (minute / 60) * 68 : minute * PIXELS_PER_MINUTE;
+}
+
 function setTouchScrollLock(active, position = null) {
   if (!active) {
     elements.timelineScroll.classList.remove("touch-selecting");
@@ -316,6 +403,7 @@ function setTouchScrollLock(active, position = null) {
 
 function renderAll() {
   const scrollPosition = activeView === "today" ? readTimelineScrollPosition() : 0;
+  applyTheme();
   renderDate();
   renderTimelineFrame();
   renderBlocks();
@@ -349,10 +437,15 @@ function openBlockDialog(id, dateKey) {
   elements.blockEnd.value = displayScheduleTime(draft.end);
   elements.blockScopeField.hidden = !existing?.recurring;
   elements.deleteBlockButton.hidden = !existing;
-  const colorRadio = elements.blockForm.querySelector(`[name="blockColor"][value="${safeColor(draft.color)}"]`);
-  if (colorRadio) colorRadio.checked = true;
+  setColorChoice(elements.blockForm, "blockColor", elements.blockCustomColor, draft.color);
   elements.blockDialog.showModal();
   setTimeout(() => elements.blockTitle.focus(), 40);
+}
+
+function closeBlockDialog() {
+  elements.blockError.textContent = "";
+  elements.blockForm.reset();
+  if (elements.blockDialog.open) elements.blockDialog.close();
 }
 
 function blockDraftFromForm(existing) {
@@ -362,7 +455,7 @@ function blockDraftFromForm(existing) {
     category: elements.blockCategory.value.trim() || null,
     start: parseScheduleTime(elements.blockStart.value),
     end: parseScheduleTime(elements.blockEnd.value, true),
-    color: elements.blockForm.querySelector('[name="blockColor"]:checked')?.value || "apricot",
+    color: readColorChoice(elements.blockForm, "blockColor", elements.blockCustomColor),
     done: existing?.done === true,
   };
 }
@@ -386,22 +479,26 @@ function saveBlock(event) {
   if (error) { elements.blockError.textContent = error; return; }
 
   const previous = cloneState();
+  let savedFocusDate = targetDate;
   if (existing?.recurring) {
     const rule = state.rules.find((item) => item.id === existing.sourceRuleId);
     if (!rule) { elements.blockError.textContent = "找不到对应的重复规则。"; return; }
     const scope = new FormData(elements.blockForm).get("blockScope");
     if (scope === "future") {
       if (targetDate !== originalDate) { elements.blockError.textContent = "“这一次及以后”不能同时更换日期；可以先保存时间，再单独调整日期。"; return; }
-      const nextRuleDraft = { ...rule, id: `rule-${Date.now()}`, title: candidate.title, category: candidate.category, start: candidate.start, duration: candidate.end - candidate.start, startDate: originalDate, color: candidate.color };
+      const splitDate = existing.recurrenceDate || originalDate;
+      const nextRuleDraft = { ...rule, id: `rule-${Date.now()}`, title: candidate.title, category: candidate.category, start: candidate.start, duration: candidate.end - candidate.start, startDate: splitDate, color: candidate.color };
       if (state.rules.some((item) => item.id !== rule.id && item.enabled && rulesConflictInRange(nextRuleDraft, item))) { elements.blockError.textContent = "调整后的规则与另一条重复日程重叠。"; return; }
-      const { previousRule, nextRule } = splitRecurringRule(rule, originalDate, nextRuleDraft);
+      const { previousRule, nextRule } = splitRecurringRule(rule, splitDate, nextRuleDraft);
       state.rules = [...state.rules.filter((item) => item.id !== rule.id), ...(previousRule ? [previousRule] : []), nextRule];
-      state.recurrenceExceptions = state.recurrenceExceptions.filter((item) => item.ruleId !== rule.id || item.date < originalDate);
-    } else if (targetDate === originalDate) {
-      state.recurrenceExceptions = upsertRecurrenceException(state.recurrenceExceptions, rule, originalDate, candidate);
+      state.recurrenceExceptions = state.recurrenceExceptions.filter((item) => item.ruleId !== rule.id || item.date < splitDate);
+      savedFocusDate = splitDate;
     } else {
-      state.recurrenceExceptions = upsertRecurrenceException(state.recurrenceExceptions, rule, originalDate, { cancelled: true });
-      setManualBlocksForDate(targetDate, [...manualBlocksForDate(targetDate), { ...candidate, id: `block-${Date.now()}`, recurring: undefined, sourceRuleId: undefined, recurrenceDate: undefined }]);
+      const recurrenceDate = existing.recurrenceDate || originalDate;
+      state.recurrenceExceptions = upsertRecurrenceException(state.recurrenceExceptions, rule, recurrenceDate, {
+        ...candidate,
+        movedToDate: targetDate === recurrenceDate ? null : targetDate,
+      });
     }
   } else {
     const id = existing?.id || `block-${Date.now()}`;
@@ -409,7 +506,7 @@ function saveBlock(event) {
     setManualBlocksForDate(targetDate, [...manualBlocksForDate(targetDate), { ...candidate, id }]);
   }
 
-  focusDateKey = targetDate;
+  focusDateKey = savedFocusDate;
   elements.blockDialog.close();
   commitChange(previous, existing ? "时间块已更新" : "安排已添加");
 }
@@ -425,11 +522,12 @@ function deleteBlock() {
     const rule = state.rules.find((item) => item.id === existing.sourceRuleId);
     if (!rule) return;
     if (scope === "future") {
-      if (rule.startDate >= originalDate) state.rules = state.rules.filter((item) => item.id !== rule.id);
-      else state.rules = state.rules.map((item) => item.id === rule.id ? { ...item, endDate: addDateKeyDays(originalDate, -1) } : item);
-      state.recurrenceExceptions = state.recurrenceExceptions.filter((item) => item.ruleId !== rule.id || item.date < originalDate);
+      const splitDate = existing.recurrenceDate || originalDate;
+      if (rule.startDate >= splitDate) state.rules = state.rules.filter((item) => item.id !== rule.id);
+      else state.rules = state.rules.map((item) => item.id === rule.id ? { ...item, endDate: addDateKeyDays(splitDate, -1) } : item);
+      state.recurrenceExceptions = state.recurrenceExceptions.filter((item) => item.ruleId !== rule.id || item.date < splitDate);
     } else {
-      state.recurrenceExceptions = upsertRecurrenceException(state.recurrenceExceptions, rule, originalDate, { cancelled: true });
+      state.recurrenceExceptions = upsertRecurrenceException(state.recurrenceExceptions, rule, existing.recurrenceDate || originalDate, { cancelled: true });
     }
   } else {
     setManualBlocksForDate(originalDate, manualBlocksForDate(originalDate).filter((block) => block.id !== existing.id));
@@ -445,7 +543,7 @@ function toggleDone(id, dateKey) {
   const nextDone = !block.done;
   if (block.recurring) {
     const rule = state.rules.find((item) => item.id === block.sourceRuleId);
-    state.recurrenceExceptions = upsertRecurrenceException(state.recurrenceExceptions, rule, dateKey, { ...block, done: nextDone });
+    state.recurrenceExceptions = upsertRecurrenceException(state.recurrenceExceptions, rule, block.recurrenceDate || dateKey, { ...block, movedToDate: dateKey === (block.recurrenceDate || dateKey) ? null : dateKey, done: nextDone });
   } else {
     setManualBlocksForDate(dateKey, manualBlocksForDate(dateKey).map((item) => item.id === id ? { ...item, done: nextDone } : item));
   }
@@ -459,7 +557,7 @@ function buildDayOptions(selectedDays = [1, 2, 3, 4, 5]) {
 function openRuleDialog(ruleId = null) {
   const rule = ruleId ? state.rules.find((item) => item.id === ruleId) : null;
   elements.ruleForm.reset();
-  elements.ruleError.textContent = "";
+  clearRuleErrors();
   elements.ruleId.value = rule?.id || "";
   elements.ruleDialogTitle.textContent = rule ? "编辑重复日程" : "新建重复日程";
   elements.ruleTitle.value = rule?.title || "";
@@ -470,10 +568,33 @@ function openRuleDialog(ruleId = null) {
   elements.ruleEndDate.value = rule?.endDate || "";
   elements.deleteRuleButton.hidden = !rule;
   buildDayOptions(rule?.days);
-  const radio = elements.ruleForm.querySelector(`[name="ruleColor"][value="${safeColor(rule?.color, "sage")}"]`);
-  if (radio) radio.checked = true;
+  setColorChoice(elements.ruleForm, "ruleColor", elements.ruleCustomColor, rule?.color, "sage");
   elements.ruleDialog.showModal();
   setTimeout(() => elements.ruleTitle.focus(), 40);
+}
+
+function clearRuleErrors() {
+  elements.ruleError.textContent = "";
+  elements.ruleForm.querySelectorAll(".field-error").forEach((field) => { field.textContent = ""; });
+  elements.ruleForm.querySelectorAll('[aria-invalid="true"]').forEach((field) => field.removeAttribute("aria-invalid"));
+}
+
+function closeRuleDialog() {
+  clearRuleErrors();
+  elements.ruleForm.reset();
+  if (elements.ruleDialog.open) elements.ruleDialog.close();
+}
+
+function showRuleErrors(validation) {
+  clearRuleErrors();
+  for (const [fieldId, message] of Object.entries(validation.errors)) {
+    const input = document.querySelector(`#${fieldId}`);
+    const error = document.querySelector(`#${fieldId}Error`);
+    if (input) input.setAttribute("aria-invalid", "true");
+    if (error) error.textContent = message;
+  }
+  const first = validation.firstField && document.querySelector(`#${validation.firstField}`);
+  first?.focus();
 }
 
 function saveRule(event) {
@@ -492,14 +613,12 @@ function saveRule(event) {
     days,
     startDate: elements.ruleStartDate.value,
     endDate: elements.ruleEndDate.value || null,
-    color: elements.ruleForm.querySelector('[name="ruleColor"]:checked')?.value || "sage",
+    color: readColorChoice(elements.ruleForm, "ruleColor", elements.ruleCustomColor, "sage"),
     enabled: existing?.enabled ?? true,
     inactiveRanges: existing?.inactiveRanges || [],
   };
-  if (!candidate.title) { elements.ruleError.textContent = "请填写重复日程名称。"; return; }
-  if (!days.length) { elements.ruleError.textContent = "至少选择一天。"; return; }
-  if (start === null || !Number.isInteger(duration) || duration < 5 || start + duration > DAY_END) { elements.ruleError.textContent = "请选择有效的开始时间和持续时长。"; return; }
-  if (!dateFromKey(candidate.startDate) || (candidate.endDate && (!dateFromKey(candidate.endDate) || candidate.endDate < candidate.startDate))) { elements.ruleError.textContent = "结束日期不能早于生效日期。"; return; }
+  const validation = validateRuleDraft(candidate);
+  if (validation.firstField) { showRuleErrors(validation); return; }
   if (state.rules.some((rule) => rule.id !== candidate.id && rule.enabled && candidate.enabled && rulesConflictInRange(candidate, rule))) { elements.ruleError.textContent = "这些日期的同一时段已有重复日程。"; return; }
   const previous = cloneState();
   state.rules = existing ? state.rules.map((rule) => rule.id === candidate.id ? candidate : rule) : [...state.rules, candidate];
@@ -543,10 +662,9 @@ function openLibraryContentEditor(contentId = null) {
   elements.libraryContentDialogTitle.textContent = content ? "编辑常用内容" : "添加常用内容";
   elements.libraryContentTitle.value = content?.title || "";
   elements.libraryContentCategory.value = content?.category || "";
-  elements.libraryContentFavorite.checked = content ? content.favorite === true : true;
   elements.deleteLibraryContentButton.hidden = !content;
-  const radio = elements.libraryContentForm.querySelector(`[name="libraryContentColor"][value="${safeColor(content?.color)}"]`);
-  if (radio) radio.checked = true;
+  elements.archiveLibraryContentButton.hidden = !content;
+  setColorChoice(elements.libraryContentForm, "libraryContentColor", elements.libraryContentCustomColor, content?.color);
   elements.libraryContentDialog.showModal();
   setTimeout(() => elements.libraryContentTitle.focus(), 40);
 }
@@ -554,7 +672,7 @@ function openLibraryContentEditor(contentId = null) {
 function saveLibraryContent(event) {
   event.preventDefault();
   const id = elements.libraryContentId.value;
-  const draft = { title: elements.libraryContentTitle.value, category: elements.libraryContentCategory.value, favorite: elements.libraryContentFavorite.checked, color: new FormData(elements.libraryContentForm).get("libraryContentColor") };
+  const draft = { title: elements.libraryContentTitle.value, category: elements.libraryContentCategory.value, status: "favorite", color: readColorChoice(elements.libraryContentForm, "libraryContentColor", elements.libraryContentCustomColor) };
   if (!draft.title.trim()) { elements.libraryContentError.textContent = "请填写内容名称。"; return; }
   const previous = cloneState();
   if (id) {
@@ -567,7 +685,30 @@ function saveLibraryContent(event) {
     state.eventContents = result.contents;
   }
   elements.libraryContentDialog.close();
-  commitChange(previous, draft.favorite ? "常用内容已保存" : "内容已移出常用列表");
+  commitChange(previous, "常用内容已保存");
+}
+
+function archiveLibraryContent() {
+  const content = state.eventContents.find((item) => item.id === elements.libraryContentId.value);
+  if (!content) return;
+  const previous = cloneState();
+  state.eventContents = archiveEventContent(state.eventContents, content.id);
+  elements.libraryContentDialog.close();
+  commitChange(previous, "常用内容已归档");
+}
+
+function restoreLibraryContent(id) {
+  const previous = cloneState();
+  state.eventContents = restoreEventContent(state.eventContents, id);
+  commitChange(previous, "已恢复到常用内容");
+}
+
+function deleteArchivedContent(id) {
+  const content = state.eventContents.find((item) => item.id === id);
+  if (!content || !window.confirm(`彻底删除“${content.title}”？已创建的时间块不会改变。`)) return;
+  const previous = cloneState();
+  state.eventContents = removeEventContent(state.eventContents, id);
+  commitChange(previous, "归档内容已删除");
 }
 
 function deleteLibraryContent() {
@@ -631,7 +772,7 @@ function switchView(viewName) {
   if (viewName === "data") viewName = "manage";
   const views = { today: elements.todayView, recurring: elements.recurringView, manage: elements.manageView };
   if (!views[viewName]) viewName = "today";
-  if (viewName !== "today") clearTimelineSelection();
+  if (viewName !== "today") { clearTimelineSelection(); exitSelectionMode(false); }
   activeView = viewName;
   Object.entries(views).forEach(([name, view]) => { const active = name === viewName; view.classList.toggle("active", active); view.hidden = !active; });
   document.querySelectorAll("[data-view]").forEach((button) => button.classList.toggle("active", button.dataset.view === viewName));
@@ -643,14 +784,16 @@ function switchView(viewName) {
 
 function changeVisibleRange(direction) {
   clearTimelineSelection();
+  exitSelectionMode(false);
   focusDateKey = addDateKeyDays(focusDateKey, direction * (viewDayCount === 7 ? 7 : viewDayCount));
   renderAll();
-  scrollTimelineToOffset(viewDayCount === 1 && focusDateKey === todayDateKey ? Math.max(0, (now.getHours() * 60 + now.getMinutes() - 90) * PIXELS_PER_MINUTE) : 0);
+  scrollTimelineToOffset(viewDayCount === 1 && focusDateKey === todayDateKey ? Math.max(0, timelineOffsetForMinute(now.getHours() * 60 + now.getMinutes() - 90)) : 0);
 }
 
 function changeViewDayCount(dayCount) {
   if (![1, 3, 7].includes(dayCount) || dayCount === viewDayCount) return;
   clearTimelineSelection();
+  exitSelectionMode(false);
   viewDayCount = dayCount;
   state.settings.viewDayCount = dayCount;
   saveState();
@@ -659,19 +802,43 @@ function changeViewDayCount(dayCount) {
 
 function goToToday() {
   clearTimelineSelection();
+  exitSelectionMode(false);
   focusDateKey = todayDateKey;
   renderAll();
-  scrollTimelineToOffset(Math.max(0, (now.getHours() * 60 + now.getMinutes() - 90) * PIXELS_PER_MINUTE));
+  scrollTimelineToOffset(Math.max(0, timelineOffsetForMinute(now.getHours() * 60 + now.getMinutes() - 90)));
 }
 
-function minuteAtPointer(clientY) {
+function minuteAtPointer(clientY, clientX = 0, target = null) {
+  if (usesHourGrid()) {
+    const hit = document.elementFromPoint(clientX, clientY) || target;
+    const row = hit?.closest?.(".hour-row") || target?.closest?.(".hour-row");
+    const quarterGrid = row?.querySelector(".quarter-grid");
+    if (row && quarterGrid) {
+      const rect = quarterGrid.getBoundingClientRect();
+      return gridCellAtPoint({ x: clientX - rect.left, width: rect.width, hour: Number(row.dataset.hour) });
+    }
+  }
   const rect = elements.timeline.getBoundingClientRect();
   return Math.max(DAY_START, Math.min(DAY_END, (clientY - rect.top) / PIXELS_PER_MINUTE));
+}
+
+function rangeFromPointers(anchor, current) {
+  return usesHourGrid()
+    ? gridSelectionRange(anchor, current)
+    : selectionRange(anchor, current, DAY_START, DAY_END, state.settings.snapMinutes, state.settings.snapMinutes);
 }
 
 function renderDraftSelection(dateKey, range) {
   const conflict = hasConflict(range, blocksForDate(dateKey));
   activeSelection = { date: dateKey, ...range };
+  if (usesHourGrid()) {
+    elements.timelineDays.querySelectorAll(`[data-date="${dateKey}"] .quarter-cell`).forEach((cell) => {
+      const minute = Number(cell.dataset.minute);
+      cell.classList.toggle("in-selection", minute >= range.start && minute < range.end);
+      cell.classList.toggle("invalid", conflict && minute >= range.start && minute < range.end);
+    });
+    return conflict;
+  }
   const selection = elements.timelineDays.querySelector(`[data-date="${dateKey}"] .draft-selection`);
   if (!selection) return conflict;
   selection.hidden = false;
@@ -722,6 +889,7 @@ function clearTimelineSelection() {
   activeSelection = null;
   selectionPoint = null;
   elements.timelineDays?.querySelectorAll(".draft-selection").forEach((selection) => { selection.hidden = true; selection.classList.remove("invalid"); });
+  elements.timelineDays?.querySelectorAll(".quarter-cell.in-selection, .quarter-cell.invalid").forEach((cell) => cell.classList.remove("in-selection", "invalid"));
   elements.actionPicker.hidden = true;
   elements.actionPicker.style.removeProperty("left");
   elements.actionPicker.style.removeProperty("top");
@@ -752,7 +920,7 @@ function saveEventContent(event) {
     createBlockFromContent(draft, previous);
     return;
   }
-  const result = upsertEventContent(state.eventContents, { ...draft, id: `content-${Date.now()}`, favorite: true, sortOrder: state.eventContents.length });
+  const result = upsertEventContent(state.eventContents, { ...draft, id: `content-${Date.now()}`, status: "favorite", sortOrder: state.eventContents.length });
   if (!result) return;
   state.eventContents = result.contents;
   createBlockFromContent(result.content, previous);
@@ -772,12 +940,12 @@ function startTimelineSelection(event) {
   const dateKey = column.dataset.date;
   clearTimelineSelection();
   event.preventDefault();
-  const anchor = minuteAtPointer(event.clientY);
-  const select = (current) => selectionRange(anchor, current, DAY_START, DAY_END, state.settings.snapMinutes, state.settings.snapMinutes);
+  const anchor = minuteAtPointer(event.clientY, event.clientX, event.target);
+  const select = (current) => rangeFromPointers(anchor, current);
   elements.timeline.setPointerCapture(event.pointerId);
   elements.timeline.classList.add("selecting");
   renderDraftSelection(dateKey, select(anchor));
-  const move = (moveEvent) => { moveEvent.preventDefault(); renderDraftSelection(dateKey, select(minuteAtPointer(moveEvent.clientY))); };
+  const move = (moveEvent) => { moveEvent.preventDefault(); renderDraftSelection(dateKey, select(minuteAtPointer(moveEvent.clientY, moveEvent.clientX, moveEvent.target))); };
   const cleanup = () => { elements.timeline.removeEventListener("pointermove", move); elements.timeline.removeEventListener("pointerup", finish); elements.timeline.removeEventListener("pointercancel", cancel); };
   const finish = (upEvent) => { cleanup(); completeTimelineSelection(dateKey, { x: upEvent.clientX, y: upEvent.clientY }); };
   const cancel = () => { cleanup(); clearTimelineSelection(); };
@@ -807,14 +975,14 @@ function startTouchTimelineSelection(event) {
   if (!column || !touch) return;
   clearPendingTouchSelection(true);
   clearTimelineSelection();
-  const pending = { active: false, anchor: minuteAtPointer(touch.clientY), dateKey: column.dataset.date, identifier: touch.identifier, origin: { x: touch.clientX, y: touch.clientY }, scrollPosition: readTimelineScrollPosition(), timer: null };
+  const pending = { active: false, anchor: minuteAtPointer(touch.clientY, touch.clientX, event.target), dateKey: column.dataset.date, identifier: touch.identifier, origin: { x: touch.clientX, y: touch.clientY }, scrollPosition: readTimelineScrollPosition(), timer: null };
   pending.timer = setTimeout(() => {
     if (touchSelection !== pending) return;
     pending.active = true;
     suppressContextMenuUntil = Date.now() + 1200;
     elements.timeline.classList.add("selecting");
     setTouchScrollLock(true, pending.scrollPosition);
-    renderDraftSelection(pending.dateKey, selectionRange(pending.anchor, pending.anchor, DAY_START, DAY_END, state.settings.snapMinutes, state.settings.snapMinutes));
+    renderDraftSelection(pending.dateKey, rangeFromPointers(pending.anchor, pending.anchor));
     if (navigator.vibrate) navigator.vibrate(8);
   }, LONG_PRESS_DELAY);
   touchSelection = pending;
@@ -830,7 +998,7 @@ function moveTouchTimelineSelection(event) {
   }
   event.preventDefault();
   if (!usesPageTimelineScroll()) restoreTimelineScrollPosition(touchSelection.scrollPosition);
-  renderDraftSelection(touchSelection.dateKey, selectionRange(touchSelection.anchor, minuteAtPointer(touch.clientY), DAY_START, DAY_END, state.settings.snapMinutes, state.settings.snapMinutes));
+  renderDraftSelection(touchSelection.dateKey, rangeFromPointers(touchSelection.anchor, minuteAtPointer(touch.clientY, touch.clientX, event.target)));
 }
 
 function finishTouchTimelineSelection(event) {
@@ -845,8 +1013,152 @@ function finishTouchTimelineSelection(event) {
   completeTimelineSelection(finished.dateKey, { x: touch.clientX, y: touch.clientY });
 }
 
+function selectedItems() {
+  return [...selectedBlockKeys].map((key) => {
+    const separator = key.indexOf("|");
+    const date = key.slice(0, separator);
+    const block = findBlock(date, key.slice(separator + 1));
+    return block ? { date, block } : null;
+  }).filter(Boolean).sort((left, right) => left.date.localeCompare(right.date) || left.block.start - right.block.start);
+}
+
+function renderSelectionToolbar() {
+  elements.selectionToolbar.hidden = !selectionMode;
+  elements.selectionModeButton.classList.toggle("active", selectionMode);
+  elements.selectionModeButton.textContent = selectionMode ? "完成" : "选择";
+  elements.selectionCount.textContent = `已选 ${selectedBlockKeys.size} 项`;
+  elements.selectionToolbar.querySelectorAll("button:not(#cancelSelectionButton)").forEach((button) => { button.disabled = selectedBlockKeys.size === 0; });
+}
+
+function enterSelectionMode(dateKey = null, id = null) {
+  clearTimelineSelection();
+  selectionMode = true;
+  if (dateKey && id) selectedBlockKeys.add(blockSelectionKey(dateKey, id));
+  renderAll();
+}
+
+function exitSelectionMode(render = true) {
+  selectionMode = false;
+  selectedBlockKeys.clear();
+  if (render) renderAll();
+  else renderSelectionToolbar();
+}
+
+function toggleBlockSelection(dateKey, id) {
+  const key = blockSelectionKey(dateKey, id);
+  if (selectedBlockKeys.has(key)) selectedBlockKeys.delete(key);
+  else selectedBlockKeys.add(key);
+  renderAll();
+}
+
+function startBlockPointerInteraction(event) {
+  if (event.target.closest("button") || event.button !== 0) return;
+  if (selectionMode) return;
+  if (event.pointerType !== "touch") { startPointerAdjustment(event); return; }
+  const article = event.currentTarget;
+  const origin = { x: event.clientX, y: event.clientY };
+  const timer = setTimeout(() => {
+    ignoreBlockClickUntil = Date.now() + 700;
+    suppressContextMenuUntil = Date.now() + 1200;
+    enterSelectionMode(article.dataset.date, article.dataset.id);
+    navigator.vibrate?.(8);
+  }, LONG_PRESS_DELAY);
+  const clear = () => {
+    clearTimeout(timer);
+    article.removeEventListener("pointermove", move);
+    article.removeEventListener("pointerup", clear);
+    article.removeEventListener("pointercancel", clear);
+  };
+  const move = (moveEvent) => { if (hasMovedBeyondTolerance(origin, { x: moveEvent.clientX, y: moveEvent.clientY }, LONG_PRESS_MOVE_TOLERANCE)) clear(); };
+  article.addEventListener("pointermove", move);
+  article.addEventListener("pointerup", clear, { once: true });
+  article.addEventListener("pointercancel", clear, { once: true });
+}
+
+function groupPlan(mode, targetDate, targetStart) {
+  const items = selectedItems();
+  const ids = items.map((_, index) => `block-${Date.now()}-${index}`);
+  const args = { items, targetDate, targetStart, mode, createId: (_, index) => ids[index] };
+  const preview = planGroupTransform({ ...args, existingByDate: {} });
+  const dates = [...new Set(preview.candidates.map((candidate) => candidate.targetDate).filter(Boolean))];
+  const existingByDate = Object.fromEntries(dates.map((dateKey) => [dateKey, blocksForDate(dateKey)]));
+  return planGroupTransform({ ...args, existingByDate });
+}
+
+function markGroupConflicts(plan) {
+  elements.timelineDays.querySelectorAll(".group-conflict").forEach((block) => block.classList.remove("group-conflict"));
+  for (const conflict of plan.conflicts) {
+    const candidate = conflict.candidate;
+    if (!candidate) continue;
+    elements.timelineDays.querySelectorAll(`[data-date="${candidate.sourceDate}"][data-id="${candidate.sourceBlock.id}"]`).forEach((block) => block.classList.add("group-conflict"));
+  }
+}
+
+function applyGroupOperation(mode, targetDate, targetStart) {
+  const plan = groupPlan(mode, targetDate, targetStart);
+  if (!plan.ok) {
+    markGroupConflicts(plan);
+    showToast(plan.conflicts.some((item) => item.reason === "boundary") ? "有时间块会超出当天范围，未执行任何修改" : "目标位置存在冲突，未执行任何修改");
+    return false;
+  }
+  const previous = cloneState();
+  if (mode === "move") {
+    for (const item of selectedItems()) {
+      if (!item.block.recurring) setManualBlocksForDate(item.date, manualBlocksForDate(item.date).filter((block) => block.id !== item.block.id));
+    }
+  }
+  for (const candidate of plan.candidates) {
+    if (mode === "move" && candidate.sourceBlock.recurring) {
+      const rule = state.rules.find((item) => item.id === candidate.sourceBlock.sourceRuleId);
+      if (!rule) { state = previous; showToast("找不到重复规则，批量操作已取消"); return false; }
+      const recurrenceDate = candidate.sourceBlock.recurrenceDate || candidate.sourceDate;
+      state.recurrenceExceptions = upsertRecurrenceException(state.recurrenceExceptions, rule, recurrenceDate, {
+        ...candidate.block,
+        movedToDate: candidate.targetDate === recurrenceDate ? null : candidate.targetDate,
+      });
+    } else {
+      setManualBlocksForDate(candidate.targetDate, [...manualBlocksForDate(candidate.targetDate), candidate.block]);
+    }
+  }
+  selectionMode = false;
+  selectedBlockKeys.clear();
+  elements.groupDialog.close();
+  commitChange(previous, mode === "copy" ? `已复制 ${plan.candidates.length} 个时间块` : `已移动 ${plan.candidates.length} 个时间块`);
+  return true;
+}
+
+function openGroupDialog(mode) {
+  const items = selectedItems();
+  if (!items.length) return;
+  elements.groupForm.reset();
+  elements.groupError.textContent = "";
+  elements.groupMode.value = mode;
+  elements.groupDialogTitle.textContent = mode === "copy" ? "复制时间块" : "整体移动";
+  elements.groupDate.value = items[0].date;
+  elements.groupStart.value = formatTime(items[0].block.start);
+  elements.groupDialog.showModal();
+  setTimeout(() => elements.groupDate.focus(), 40);
+}
+
+function closeGroupDialog() {
+  elements.groupError.textContent = "";
+  if (elements.groupDialog.open) elements.groupDialog.close();
+}
+
+function saveGroup(event) {
+  event.preventDefault();
+  const start = parseTime(elements.groupStart.value);
+  if (!dateFromKey(elements.groupDate.value) || start === null) { elements.groupError.textContent = "请选择有效的目标日期和时间。"; return; }
+  applyGroupOperation(elements.groupMode.value, elements.groupDate.value, start);
+}
+
+function quickShift(minutes) {
+  const [anchor] = selectedItems();
+  if (anchor) applyGroupOperation("move", anchor.date, anchor.block.start + minutes);
+}
+
 function startPointerAdjustment(event) {
-  if (event.button !== 0 || event.target.closest("button") || viewDayCount === 7) return;
+  if (event.button !== 0 || event.target.closest("button") || viewDayCount === 7 || usesHourGrid() || selectionMode) return;
   const article = event.currentTarget;
   const dateKey = article.dataset.date;
   const block = findBlock(dateKey, article.dataset.id);
@@ -873,7 +1185,8 @@ function startPointerAdjustment(event) {
     const previous = cloneState();
     if (block.recurring) {
       const rule = state.rules.find((item) => item.id === block.sourceRuleId);
-      state.recurrenceExceptions = upsertRecurrenceException(state.recurrenceExceptions, rule, dateKey, candidate);
+      const recurrenceDate = block.recurrenceDate || dateKey;
+      state.recurrenceExceptions = upsertRecurrenceException(state.recurrenceExceptions, rule, recurrenceDate, { ...candidate, movedToDate: dateKey === recurrenceDate ? null : dateKey });
     } else setManualBlocksForDate(dateKey, manualBlocksForDate(dateKey).map((item) => item.id === block.id ? candidate : item));
     commitChange(previous, resizing ? "时长已调整" : `已移动到 ${formatTime(candidate.start)}`);
   };
@@ -890,6 +1203,10 @@ document.addEventListener("click", (event) => {
   if (editContent) { openLibraryContentEditor(editContent.dataset.editEventContent); return; }
   const moveContent = event.target.closest("[data-move-content]");
   if (moveContent) { moveLibraryContent(moveContent.dataset.moveContent, Number(moveContent.dataset.direction)); return; }
+  const restoreContent = event.target.closest("[data-restore-content]");
+  if (restoreContent) { restoreLibraryContent(restoreContent.dataset.restoreContent); return; }
+  const deleteArchived = event.target.closest("[data-delete-archived-content]");
+  if (deleteArchived) { deleteArchivedContent(deleteArchived.dataset.deleteArchivedContent); return; }
   const editRule = event.target.closest("[data-edit-rule]");
   if (editRule) openRuleDialog(editRule.dataset.editRule);
 });
@@ -902,7 +1219,11 @@ document.addEventListener("pointerdown", (event) => {
   if (!elements.actionPicker.hidden && !elements.actionPicker.contains(event.target) && !event.target.closest(".timeline")) clearTimelineSelection();
 });
 
-document.addEventListener("keydown", (event) => { if (event.key === "Escape" && !elements.actionPicker.hidden) clearTimelineSelection(); });
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  if (!elements.actionPicker.hidden) clearTimelineSelection();
+  else if (selectionMode && !elements.groupDialog.open) exitSelectionMode();
+});
 document.querySelectorAll("[data-view]").forEach((button) => button.addEventListener("click", () => switchView(button.dataset.view)));
 document.querySelectorAll("[data-view-days]").forEach((button) => button.addEventListener("click", () => changeViewDayCount(Number(button.dataset.viewDays))));
 elements.previousRangeButton.addEventListener("click", () => changeVisibleRange(-1));
@@ -915,7 +1236,7 @@ elements.clearDoneButton.addEventListener("click", () => {
   for (const block of completed) {
     if (block.recurring) {
       const rule = state.rules.find((item) => item.id === block.sourceRuleId);
-      state.recurrenceExceptions = upsertRecurrenceException(state.recurrenceExceptions, rule, block.dateKey, { cancelled: true });
+      state.recurrenceExceptions = upsertRecurrenceException(state.recurrenceExceptions, rule, block.recurrenceDate || block.dateKey, { cancelled: true });
     } else setManualBlocksForDate(block.dateKey, manualBlocksForDate(block.dateKey).filter((item) => item.id !== block.id));
   }
   commitChange(previous, `已清理 ${completed.length} 个完成项`);
@@ -926,12 +1247,19 @@ elements.cancelContentButton.addEventListener("click", () => showContentList(tru
 elements.newRuleButton.addEventListener("click", () => openRuleDialog());
 elements.ruleForm.addEventListener("submit", saveRule);
 elements.deleteRuleButton.addEventListener("click", deleteRule);
+elements.closeRuleButton.addEventListener("click", closeRuleDialog);
+elements.cancelRuleButton.addEventListener("click", closeRuleDialog);
+elements.ruleDialog.addEventListener("cancel", (event) => { event.preventDefault(); closeRuleDialog(); });
 elements.blockForm.addEventListener("submit", saveBlock);
 elements.deleteBlockButton.addEventListener("click", deleteBlock);
+elements.closeBlockButton.addEventListener("click", closeBlockDialog);
+elements.cancelBlockButton.addEventListener("click", closeBlockDialog);
+elements.blockDialog.addEventListener("cancel", () => { elements.blockError.textContent = ""; });
 elements.contentForm.addEventListener("submit", saveEventContent);
 elements.newFavoriteButton.addEventListener("click", () => openLibraryContentEditor());
 elements.libraryContentForm.addEventListener("submit", saveLibraryContent);
 elements.deleteLibraryContentButton.addEventListener("click", deleteLibraryContent);
+elements.archiveLibraryContentButton.addEventListener("click", archiveLibraryContent);
 elements.closeLibraryContentButton.addEventListener("click", () => elements.libraryContentDialog.close());
 elements.cancelLibraryContentButton.addEventListener("click", () => elements.libraryContentDialog.close());
 elements.exportDataButton.addEventListener("click", exportData);
@@ -940,6 +1268,30 @@ elements.importDataFile.addEventListener("change", importData);
 elements.clearDataButton.addEventListener("click", clearAllData);
 elements.defaultViewSetting.addEventListener("change", () => changeViewDayCount(Number(elements.defaultViewSetting.value)));
 elements.snapSetting.addEventListener("change", () => { state.settings.snapMinutes = Number(elements.snapSetting.value); saveState(); showToast(`已改为 ${state.settings.snapMinutes} 分钟吸附`); });
+elements.accentOptions.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-accent-color]");
+  if (!button) return;
+  state.settings.accentColor = safeColor(button.dataset.accentColor, "#486f65");
+  saveState(); renderAll(); showToast("强调色已更新");
+});
+elements.accentCustomColor.addEventListener("input", () => {
+  state.settings.accentColor = safeColor(elements.accentCustomColor.value, "#486f65");
+  applyTheme();
+});
+elements.accentCustomColor.addEventListener("change", () => { saveState(); renderAll(); showToast("自定义强调色已保存"); });
+for (const [input, name, form] of [[elements.blockCustomColor, "blockColor", elements.blockForm], [elements.ruleCustomColor, "ruleColor", elements.ruleForm], [elements.libraryContentCustomColor, "libraryContentColor", elements.libraryContentForm]]) {
+  input.addEventListener("input", () => { const radio = form.querySelector(`[name="${name}"][value="custom"]`); if (radio) radio.checked = true; });
+}
+elements.selectionModeButton.addEventListener("click", () => { if (selectionMode) exitSelectionMode(); else enterSelectionMode(); });
+elements.cancelSelectionButton.addEventListener("click", () => exitSelectionMode());
+elements.copySelectionButton.addEventListener("click", () => openGroupDialog("copy"));
+elements.moveSelectionButton.addEventListener("click", () => openGroupDialog("move"));
+elements.shift15Button.addEventListener("click", () => quickShift(15));
+elements.shift30Button.addEventListener("click", () => quickShift(30));
+elements.groupForm.addEventListener("submit", saveGroup);
+elements.closeGroupButton.addEventListener("click", closeGroupDialog);
+elements.cancelGroupButton.addEventListener("click", closeGroupDialog);
+elements.groupDialog.addEventListener("cancel", (event) => { event.preventDefault(); closeGroupDialog(); });
 elements.undoButton.addEventListener("click", () => {
   if (!undoSnapshot) return;
   state = undoSnapshot;
@@ -955,7 +1307,10 @@ elements.timeline.addEventListener("touchmove", moveTouchTimelineSelection, { pa
 elements.timeline.addEventListener("touchend", finishTouchTimelineSelection, { passive: false });
 elements.timeline.addEventListener("touchcancel", () => clearPendingTouchSelection(true));
 elements.timeline.addEventListener("contextmenu", (event) => { if (Date.now() < suppressContextMenuUntil && event.target.closest(".day-column")) event.preventDefault(); });
-window.addEventListener("resize", positionActionPicker);
+window.addEventListener("resize", () => {
+  positionActionPicker();
+  if (lastHourGridMode !== usesHourGrid()) renderAll();
+});
 window.addEventListener("hashchange", () => switchView(window.location.hash.slice(1)));
 
 renderAll();

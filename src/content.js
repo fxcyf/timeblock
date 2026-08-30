@@ -2,13 +2,24 @@ function cleanText(value) {
   return String(value ?? "").trim().replace(/\s+/g, " ");
 }
 
+export function eventContentStatus(content) {
+  if (["oneTime", "favorite", "archived"].includes(content?.status)) return content.status;
+  return content?.favorite === true ? "favorite" : "oneTime";
+}
+
 export function eventContentCategories(contents) {
   return [...new Set(contents.map((content) => cleanText(content.category)).filter(Boolean))];
 }
 
 export function favoriteEventContents(contents) {
   return contents
-    .filter((content) => content.favorite === true)
+    .filter((content) => eventContentStatus(content) === "favorite")
+    .sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0));
+}
+
+export function archivedEventContents(contents) {
+  return contents
+    .filter((content) => eventContentStatus(content) === "archived")
     .sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0));
 }
 
@@ -30,10 +41,12 @@ export function upsertEventContent(contents, draft) {
   ));
 
   if (existingIndex >= 0) {
+    const existingStatus = eventContentStatus(contents[existingIndex]);
     const content = {
       ...contents[existingIndex],
-      favorite: contents[existingIndex].favorite === true || draft.favorite === true,
+      status: draft.favorite === true || draft.status === "favorite" ? "favorite" : existingStatus,
     };
+    delete content.favorite;
     return {
       content,
       contents: contents.map((item, index) => index === existingIndex ? content : item),
@@ -45,7 +58,7 @@ export function upsertEventContent(contents, draft) {
     id: draft.id,
     title,
     category,
-    favorite: draft.favorite === true,
+    status: draft.status || (draft.favorite === true ? "favorite" : "oneTime"),
     color: draft.color,
     sortOrder: Number.isInteger(draft.sortOrder) ? draft.sortOrder : contents.length,
   };
@@ -63,7 +76,7 @@ export function moveEventContent(contents, id, direction) {
   const index = ordered.findIndex((content) => content.id === id);
   if (index < 0) return ordered;
   const peers = ordered.map((content, peerIndex) => ({ content, peerIndex }))
-    .filter(({ content }) => content.favorite === ordered[index].favorite);
+    .filter(({ content }) => eventContentStatus(content) === eventContentStatus(ordered[index]));
   const peerPosition = peers.findIndex(({ peerIndex }) => peerIndex === index);
   const targetPeer = Math.max(0, Math.min(peers.length - 1, peerPosition + Math.sign(direction)));
   const target = peers[targetPeer].peerIndex;
@@ -88,11 +101,29 @@ export function updateEventContent(contents, id, draft) {
     ...contents[contentIndex],
     title,
     category,
-    favorite: draft.favorite === true,
+    status: draft.status || (draft.favorite === true ? "favorite" : "archived"),
     color: draft.color || contents[contentIndex].color,
   };
+  delete content.favorite;
   return {
     content,
     contents: contents.map((item, index) => index === contentIndex ? content : item),
   };
+}
+
+function setEventContentStatus(contents, id, status) {
+  return contents.map((content) => {
+    if (content.id !== id) return content;
+    const updated = { ...content, status };
+    delete updated.favorite;
+    return updated;
+  });
+}
+
+export function archiveEventContent(contents, id) {
+  return setEventContentStatus(contents, id, "archived");
+}
+
+export function restoreEventContent(contents, id) {
+  return setEventContentStatus(contents, id, "favorite");
 }

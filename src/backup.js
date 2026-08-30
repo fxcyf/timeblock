@@ -1,9 +1,9 @@
 import { migrateAppState } from "./state.js";
+import { normalizeColorValue } from "./theme.js";
 
 const BACKUP_FORMAT = "timeblock-backup";
-const BACKUP_VERSION = 2;
+const BACKUP_VERSION = 3;
 const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-const PALETTE = new Set(["apricot", "sage", "blue", "lilac"]);
 
 function isRecord(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -27,9 +27,7 @@ function dateKey(value, label, optional = false) {
 }
 
 function paletteColor(value, fallback = "apricot") {
-  const color = value ?? fallback;
-  if (!PALETTE.has(color)) throw new Error("颜色数据无效");
-  return color;
+  return normalizeColorValue(value, fallback);
 }
 
 function minute(value, label, allowDayEnd = false) {
@@ -77,7 +75,9 @@ function normalizeContent(content, index) {
     id: requiredText(content.id, "事件内容 ID"),
     title: requiredText(content.title, "事件内容名称"),
     category: optionalText(content.category, "事件内容分类"),
-    favorite: content.favorite === true,
+    status: ["oneTime", "favorite", "archived"].includes(content.status)
+      ? content.status
+      : (content.favorite === true ? "favorite" : "oneTime"),
     color: paletteColor(content.color),
     sortOrder: Number.isInteger(content.sortOrder) && content.sortOrder >= 0 ? content.sortOrder : index,
   };
@@ -107,7 +107,7 @@ function normalizeException(exception) {
   const start = minute(exception.start, "例外开始时间");
   const end = minute(exception.end, "例外结束时间", true);
   if (end <= start) throw new Error("重复例外范围无效");
-  return {
+  const normalized = {
     id: requiredText(exception.id, "重复例外 ID"),
     ruleId: requiredText(exception.ruleId, "重复日程引用"),
     date: dateKey(exception.date, "重复例外日期"),
@@ -119,6 +119,8 @@ function normalizeException(exception) {
     done: exception.done === true,
     cancelled: exception.cancelled === true,
   };
+  if (exception.movedToDate) normalized.movedToDate = dateKey(exception.movedToDate, "例外移动日期");
+  return normalized;
 }
 
 function normalizeBlocksByDate(value) {
@@ -142,6 +144,7 @@ function normalizeV2State(state) {
     settings: {
       viewDayCount: [1, 3, 7].includes(viewDayCount) ? viewDayCount : 1,
       snapMinutes: [5, 15, 30].includes(snapMinutes) ? snapMinutes : 15,
+      accentColor: paletteColor(state.settings?.accentColor, "#486f65"),
     },
     rules: state.rules.map((rule) => normalizeRule(rule)),
     recurrenceExceptions: state.recurrenceExceptions.map(normalizeException),
@@ -178,7 +181,7 @@ export function parseBackup(text) {
   }
   const migrationDate = typeof parsed?.exportedAt === "string" ? parsed.exportedAt.slice(0, 10) : new Date().toISOString().slice(0, 10);
   if (parsed?.format === BACKUP_FORMAT) {
-    if (parsed.version === 2) return normalizeV2State(parsed.state);
+    if (parsed.version === 3 || parsed.version === 2) return normalizeV2State(parsed.state);
     if (parsed.version === 1) return normalizeLegacyState(parsed.state, migrationDate);
     throw new Error("不支持这个备份版本");
   }

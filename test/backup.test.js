@@ -5,10 +5,10 @@ import { createBackup, parseBackup } from "../src/backup.js";
 
 const state = {
   schemaVersion: 2,
-  settings: { viewDayCount: 3, snapMinutes: 15 },
+  settings: { viewDayCount: 3, snapMinutes: 15, accentColor: "#486f65" },
   rules: [{ id: "dinner", title: "晚餐", category: "用餐", start: 1140, duration: 45, days: [1, 2, 3], startDate: "2026-01-01", endDate: null, color: "apricot", enabled: true, inactiveRanges: [] }],
   recurrenceExceptions: [{ id: "exception-dinner-2026-08-28", ruleId: "dinner", date: "2026-08-28", title: "晚餐", category: "用餐", start: 1150, end: 1195, color: "apricot", done: true, cancelled: false }],
-  eventContents: [{ id: "content-dinner", title: "晚餐", category: "用餐", favorite: true, color: "apricot", sortOrder: 0 }],
+  eventContents: [{ id: "content-dinner", title: "晚餐", category: "用餐", status: "favorite", color: "#b96d4e", sortOrder: 0 }],
   blocksByDate: {
     "2026-08-28": [{ id: "block-dinner", contentId: "content-dinner", title: "晚餐", category: "用餐", start: 1140, end: 1185, color: "apricot", done: false }],
   },
@@ -17,7 +17,7 @@ const state = {
 test("exports a versioned backup and restores the complete state", () => {
   const backup = createBackup(state, "2026-08-28T12:00:00.000Z");
   assert.equal(backup.format, "timeblock-backup");
-  assert.equal(backup.version, 2);
+  assert.equal(backup.version, 3);
   assert.equal(backup.exportedAt, "2026-08-28T12:00:00.000Z");
   assert.deepEqual(parseBackup(JSON.stringify(backup)), state);
 });
@@ -40,6 +40,17 @@ test("imports a V1 backup and migrates copied recurring instances", () => {
   assert.equal(migrated.recurrenceExceptions[0].done, true);
 });
 
+test("imports a V2 backup with legacy favorite flags", () => {
+  const legacyV2 = {
+    ...state,
+    settings: { viewDayCount: 1, snapMinutes: 15 },
+    eventContents: [{ id: "old", title: "旧常用", favorite: true, color: "sage" }],
+  };
+  const migrated = parseBackup(JSON.stringify({ format: "timeblock-backup", version: 2, state: legacyV2 }));
+  assert.equal(migrated.eventContents[0].status, "favorite");
+  assert.equal(migrated.settings.accentColor, "#486f65");
+});
+
 test("accepts the original single-day localStorage shape", () => {
   const migrated = parseBackup(JSON.stringify({
     date: "2026-08-28",
@@ -51,10 +62,20 @@ test("accepts the original single-day localStorage shape", () => {
   assert.equal(migrated.blocksByDate["2026-08-28"][0].title, "泡茶");
 });
 
-test("rejects malformed or unsafe backup data", () => {
+test("rejects malformed structures and safely falls back from invalid colors", () => {
   assert.throws(() => parseBackup("not json"), /JSON/);
   assert.throws(() => parseBackup(JSON.stringify({ ...state, blocksByDate: [] })), /日期数据/);
-  assert.throws(() => parseBackup(JSON.stringify({ ...state, eventContents: [{ ...state.eventContents[0], color: "url(bad)" }] })), /颜色/);
-  assert.throws(() => parseBackup(JSON.stringify({ format: "timeblock-backup", version: 3, state })), /版本/);
+  assert.equal(parseBackup(JSON.stringify({ ...state, eventContents: [{ ...state.eventContents[0], color: "url(bad)" }] })).eventContents[0].color, "apricot");
+  assert.throws(() => parseBackup(JSON.stringify({ format: "timeblock-backup", version: 4, state })), /版本/);
   assert.throws(() => parseBackup(JSON.stringify({ ...state, schemaVersion: 3 })), /版本/);
+});
+
+test("round-trips archived content, accent colors, and moved recurring exceptions", () => {
+  const custom = {
+    ...state,
+    settings: { ...state.settings, accentColor: "#315f57" },
+    eventContents: [{ ...state.eventContents[0], status: "archived" }],
+    recurrenceExceptions: [{ ...state.recurrenceExceptions[0], movedToDate: "2026-08-29" }],
+  };
+  assert.deepEqual(parseBackup(JSON.stringify(createBackup(custom))), custom);
 });

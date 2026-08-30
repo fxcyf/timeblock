@@ -27,20 +27,22 @@ export function exceptionId(ruleId, dateKey) {
 export function materializeRecurringForDate(rules, exceptions, dateKey) {
   return rules.flatMap((rule) => {
     const exception = exceptions.find((item) => item.ruleId === rule.id && item.date === dateKey);
-    if (exception?.cancelled) return [];
-    if (!exception && !ruleOccursOnDate(rule, dateKey)) return [];
-    return [{
-      id: recurringInstanceId(rule.id, dateKey),
-      title: exception?.title ?? rule.title,
-      category: exception && Object.hasOwn(exception, "category") ? exception.category : (rule.category || null),
-      start: exception?.start ?? rule.start,
-      end: exception?.end ?? rule.start + rule.duration,
-      color: exception?.color ?? rule.color ?? "sage",
-      done: exception?.done === true,
+    const movedHere = exceptions.filter((item) => item.ruleId === rule.id && item.date !== dateKey && item.movedToDate === dateKey && !item.cancelled);
+    const sources = [];
+    if (!exception?.cancelled && !exception?.movedToDate && (exception || ruleOccursOnDate(rule, dateKey))) sources.push({ exception, recurrenceDate: dateKey });
+    sources.push(...movedHere.map((item) => ({ exception: item, recurrenceDate: item.date })));
+    return sources.map(({ exception: override, recurrenceDate }) => ({
+      id: recurringInstanceId(rule.id, recurrenceDate),
+      title: override?.title ?? rule.title,
+      category: override && Object.hasOwn(override, "category") ? override.category : (rule.category || null),
+      start: override?.start ?? rule.start,
+      end: override?.end ?? rule.start + rule.duration,
+      color: override?.color ?? rule.color ?? "sage",
+      done: override?.done === true,
       sourceRuleId: rule.id,
-      recurrenceDate: dateKey,
+      recurrenceDate,
       recurring: true,
-    }];
+    }));
   });
 }
 
@@ -58,6 +60,8 @@ export function upsertRecurrenceException(exceptions, rule, dateKey, changes = {
     done: changes.done ?? current?.done ?? false,
     cancelled: changes.cancelled === true,
   };
+  const movedToDate = Object.hasOwn(changes, "movedToDate") ? changes.movedToDate : current?.movedToDate;
+  if (movedToDate) next.movedToDate = movedToDate;
   return [...exceptions.filter((item) => !(item.ruleId === rule.id && item.date === dateKey)), next];
 }
 

@@ -2,16 +2,19 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  archiveEventContent,
+  archivedEventContents,
   colorForEventContent,
   eventContentCategories,
   favoriteEventContents,
   moveEventContent,
   removeEventContent,
+  restoreEventContent,
   updateEventContent,
   upsertEventContent,
 } from "../src/content.js";
 
-test("creates event content with an optional category and favorite flag", () => {
+test("creates event content with an optional category and favorite state", () => {
   const result = upsertEventContent([], {
     id: "content-walk",
     title: "  晚间   散步 ",
@@ -25,7 +28,7 @@ test("creates event content with an optional category and favorite flag", () => 
       id: "content-walk",
       title: "晚间 散步",
       category: "健康",
-      favorite: true,
+      status: "favorite",
       color: "sage",
       sortOrder: 0,
     },
@@ -33,7 +36,7 @@ test("creates event content with an optional category and favorite flag", () => 
       id: "content-walk",
       title: "晚间 散步",
       category: "健康",
-      favorite: true,
+      status: "favorite",
       color: "sage",
       sortOrder: 0,
     }],
@@ -53,7 +56,7 @@ test("reuses duplicate content and can promote it to favorites", () => {
 
   assert.equal(result.created, false);
   assert.equal(result.content.id, "read");
-  assert.equal(result.content.favorite, true);
+  assert.equal(result.content.status, "favorite");
   assert.equal(result.content.color, "blue");
 });
 
@@ -78,7 +81,7 @@ test("edits a reusable event content without changing its identity", () => {
   const result = updateEventContent(contents, "walk", {
     title: "  晚间   散步 ",
     category: " 放松 ",
-    favorite: false,
+    status: "archived",
     color: "blue",
   });
 
@@ -86,7 +89,7 @@ test("edits a reusable event content without changing its identity", () => {
     id: "walk",
     title: "晚间 散步",
     category: "放松",
-    favorite: false,
+    status: "archived",
     color: "blue",
   });
   assert.equal(result.contents[0].id, "walk");
@@ -127,4 +130,16 @@ test("reorders favorites across hidden one-off content", () => {
   ];
   const moved = moveEventContent(contents, "read", -1);
   assert.deepEqual(favoriteEventContents(moved).map((item) => item.id), ["read", "walk"]);
+});
+
+test("archives and restores favorites while one-time content stays hidden", () => {
+  const contents = [
+    { id: "walk", title: "散步", status: "favorite", sortOrder: 0 },
+    { id: "tea", title: "泡茶", status: "oneTime", sortOrder: 1 },
+  ];
+  const archived = archiveEventContent(contents, "walk");
+  assert.deepEqual(favoriteEventContents(archived), []);
+  assert.deepEqual(archivedEventContents(archived).map((item) => item.id), ["walk"]);
+  assert.equal(archivedEventContents(archived).some((item) => item.id === "tea"), false);
+  assert.deepEqual(favoriteEventContents(restoreEventContent(archived, "walk")).map((item) => item.id), ["walk"]);
 });

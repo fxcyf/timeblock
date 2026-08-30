@@ -45,6 +45,14 @@ test("stores one-date edits, completion, and cancellation as exceptions", () => 
   assert.deepEqual(materializeRecurringForDate([rule], exceptions, "2026-08-25"), []);
 });
 
+test("moves one recurring occurrence to another date without changing its rule", () => {
+  const exceptions = upsertRecurrenceException([], rule, "2026-08-25", { start: 600, end: 660, movedToDate: "2026-08-26" });
+  assert.deepEqual(materializeRecurringForDate([rule], exceptions, "2026-08-25"), []);
+  const [moved] = materializeRecurringForDate([rule], exceptions, "2026-08-26");
+  assert.equal(moved.start, 600);
+  assert.equal(moved.recurrenceDate, "2026-08-25");
+});
+
 test("keeps a materialized historical exception visible while its rule is paused", () => {
   const pausedRule = { ...rule, enabled: false, inactiveRanges: [] };
   const exceptions = upsertRecurrenceException([], rule, "2026-08-25", { done: true });
