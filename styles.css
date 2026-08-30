@@ -320,10 +320,10 @@ html.touch-selecting-page body { position: fixed; right: 0; left: 0; width: 100%
 }
 
 @media (max-width: 760px) {
-  body { padding-bottom: calc(68px + env(safe-area-inset-bottom)); }
+  body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
   .sidebar { display: none; }
-  .main-content { min-height: 0; margin-left: 0; padding: 14px 9px 18px; }
-  .topbar { top: 0; min-height: 60px; gap: 6px; margin-bottom: 4px; padding-block: 4px; }
+  .main-content { min-height: 0; margin-left: 0; padding: 8px 9px 18px; padding-right: max(9px, env(safe-area-inset-right, 0px)); padding-left: max(9px, env(safe-area-inset-left, 0px)); }
+  .topbar { top: calc(8px + env(safe-area-inset-top, 0px)); min-height: 60px; gap: 6px; margin-bottom: 8px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 16px; background: rgba(245,242,234,.96); box-shadow: 0 6px 18px rgba(35,39,35,.07); }
   .date-navigation { flex: 1; min-width: 0; }
   .date-navigation p { flex: 1; min-width: 0; font-size: .9375rem; white-space: nowrap; }
   .topbar-actions { gap: 4px; }
@@ -361,20 +361,20 @@ html.touch-selecting-page body { position: fixed; right: 0; left: 0; width: 100%
   .data-actions .danger-button { margin: 6px 0 0; }
   .content-library-item { grid-template-columns: 9px minmax(0, 1fr) auto; }
   .order-actions { display: none; }
-  .mobile-nav { position: fixed; z-index: 90; right: 0; bottom: 0; left: 0; height: calc(64px + env(safe-area-inset-bottom)); display: grid; grid-template-columns: repeat(3, 1fr); padding: 5px 24px env(safe-area-inset-bottom); border-top: 1px solid var(--line); background: rgba(255,254,250,.97); backdrop-filter: blur(12px); }
+  .mobile-nav { position: fixed; z-index: 90; right: max(8px, env(safe-area-inset-right, 0px)); bottom: calc(8px + env(safe-area-inset-bottom, 0px)); left: max(8px, env(safe-area-inset-left, 0px)); height: 64px; display: grid; grid-template-columns: repeat(3, 1fr); padding: 5px 16px; border: 1px solid var(--line); border-radius: 16px; background: rgba(255,254,250,.97); box-shadow: 0 10px 28px rgba(30,35,30,.12); backdrop-filter: blur(12px); }
   .mobile-nav button { min-height: 54px; display: grid; place-items: center; align-content: center; gap: 2px; border: 0; border-radius: 10px; color: var(--muted); background: transparent; cursor: pointer; }
   .mobile-nav button.active { color: var(--ink); background: var(--surface-soft); }
   .mobile-nav span { font-size: .75rem; font-weight: 700; }
-  .action-picker { right: 12px !important; bottom: calc(72px + env(safe-area-inset-bottom)); left: 12px !important; width: auto; max-height: calc(100vh - 96px); overflow-y: auto; }
+  .action-picker { right: max(12px, env(safe-area-inset-right, 0px)) !important; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); left: max(12px, env(safe-area-inset-left, 0px)) !important; width: auto; max-height: calc(100vh - 104px); overflow-y: auto; }
   .sheet-dialog { width: 100%; max-width: none; max-height: 92vh; margin: auto 0 0; border-radius: 18px 18px 0 0; }
-  .sheet-dialog form { padding: 20px 16px calc(20px + env(safe-area-inset-bottom)); }
+  .sheet-dialog form { padding: 20px 16px calc(20px + env(safe-area-inset-bottom, 0px)); }
   .field-row { grid-template-columns: 1fr 1fr; }
   .dialog-actions.split { grid-template-columns: 1fr 1fr; }
   .dialog-actions.content-dialog-actions { grid-template-columns: 1fr 1fr; }
   .dialog-actions.content-dialog-actions > span { display: none; }
   .dialog-actions.split > span { display: none; }
-  .toast { right: 12px; bottom: calc(74px + env(safe-area-inset-bottom)); left: 12px; justify-content: space-between; }
-  .selection-toolbar { right: 8px; bottom: calc(70px + env(safe-area-inset-bottom)); left: 8px; width: auto; max-width: none; min-height: 0; flex-wrap: wrap; justify-content: center; padding: 8px; }
+  .toast { right: max(12px, env(safe-area-inset-right, 0px)); bottom: calc(84px + env(safe-area-inset-bottom, 0px)); left: max(12px, env(safe-area-inset-left, 0px)); justify-content: space-between; }
+  .selection-toolbar { right: max(8px, env(safe-area-inset-right, 0px)); bottom: calc(84px + env(safe-area-inset-bottom, 0px)); left: max(8px, env(safe-area-inset-left, 0px)); width: auto; max-width: none; min-height: 0; flex-wrap: wrap; justify-content: center; padding: 8px; }
   .selection-summary { width: 100%; justify-content: center; padding-right: 34px; }
   .selection-actions { width: 100%; justify-content: center; }
   .selection-toolbar .secondary-button, .selection-toolbar .primary-button, .selection-toolbar .danger-button { min-height: 44px; }
