@@ -19,7 +19,8 @@ test("migrates copied recurring blocks into V2 exceptions without duplicating in
   assert.equal(migrated.schemaVersion, 2);
   assert.deepEqual(migrated.blocksByDate["2026-08-25"].map((block) => block.id), ["block-tea"]);
   assert.equal(migrated.recurrenceExceptions[0].ruleId, "read");
-  assert.equal(migrated.recurrenceExceptions[0].done, true);
+  assert.equal(Object.hasOwn(migrated.recurrenceExceptions[0], "done"), false);
+  assert.equal(Object.hasOwn(migrated.blocksByDate["2026-08-25"][0], "done"), false);
   assert.equal(migrated.settings.viewDayCount, 3);
   assert.equal(migrated.settings.snapMinutes, 15);
 });

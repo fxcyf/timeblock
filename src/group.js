@@ -9,7 +9,8 @@ function dayDifference(from, to) {
 }
 
 function detachedCopy(block, id) {
-  const copy = { ...block, id, done: false };
+  const copy = { ...block, id };
+  delete copy.done;
   delete copy.recurring;
   delete copy.sourceRuleId;
   delete copy.recurrenceDate;
@@ -46,6 +47,7 @@ export function planGroupTransform({ items, targetDate, targetStart, mode, exist
     const block = mode === "copy"
       ? detachedCopy(item.block, createId(item.block, index))
       : { ...item.block };
+    delete block.done;
     block.start = start;
     block.end = start + duration;
     return { sourceDate: item.date, sourceBlock: item.block, targetDate: dateOffset === null ? null : addDateKeyDays(targetDate, dateOffset), block };

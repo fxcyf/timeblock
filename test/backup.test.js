@@ -7,10 +7,10 @@ const state = {
   schemaVersion: 2,
   settings: { viewDayCount: 3, snapMinutes: 15, accentColor: "#486f65" },
   rules: [{ id: "dinner", title: "晚餐", category: "用餐", start: 1140, duration: 45, days: [1, 2, 3], startDate: "2026-01-01", endDate: null, color: "apricot", enabled: true, inactiveRanges: [] }],
-  recurrenceExceptions: [{ id: "exception-dinner-2026-08-28", ruleId: "dinner", date: "2026-08-28", title: "晚餐", category: "用餐", start: 1150, end: 1195, color: "apricot", done: true, cancelled: false }],
+  recurrenceExceptions: [{ id: "exception-dinner-2026-08-28", ruleId: "dinner", date: "2026-08-28", title: "晚餐", category: "用餐", start: 1150, end: 1195, color: "apricot", cancelled: false }],
   eventContents: [{ id: "content-dinner", title: "晚餐", category: "用餐", status: "favorite", color: "#b96d4e", sortOrder: 0 }],
   blocksByDate: {
-    "2026-08-28": [{ id: "block-dinner", contentId: "content-dinner", title: "晚餐", category: "用餐", start: 1140, end: 1185, color: "apricot", done: false }],
+    "2026-08-28": [{ id: "block-dinner", contentId: "content-dinner", title: "晚餐", category: "用餐", start: 1140, end: 1185, color: "apricot" }],
   },
 };
 
@@ -37,7 +37,18 @@ test("imports a V1 backup and migrates copied recurring instances", () => {
   assert.equal(migrated.schemaVersion, 2);
   assert.equal(migrated.settings.viewDayCount, 7);
   assert.equal(migrated.blocksByDate["2026-08-28"].length, 0);
-  assert.equal(migrated.recurrenceExceptions[0].done, true);
+  assert.equal(Object.hasOwn(migrated.recurrenceExceptions[0], "done"), false);
+});
+
+test("drops legacy completion flags from imported and exported data", () => {
+  const contaminated = {
+    ...state,
+    recurrenceExceptions: [{ ...state.recurrenceExceptions[0], done: true }],
+    blocksByDate: { "2026-08-28": [{ ...state.blocksByDate["2026-08-28"][0], done: true }] },
+  };
+  const normalized = parseBackup(JSON.stringify(createBackup(contaminated)));
+  assert.equal(Object.hasOwn(normalized.recurrenceExceptions[0], "done"), false);
+  assert.equal(Object.hasOwn(normalized.blocksByDate["2026-08-28"][0], "done"), false);
 });
 
 test("imports a V2 backup with legacy favorite flags", () => {

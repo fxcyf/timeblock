@@ -5,6 +5,14 @@ import { readFileSync } from "node:fs";
 import { validateRuleDraft } from "../src/forms.js";
 
 const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
+const css = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
+
+test("schedule blocks do not expose completion controls", () => {
+  assert.doesNotMatch(html, /clearDoneButton|icon-check/);
+  assert.doesNotMatch(app, /block-check|toggleDone|clearDoneButton/);
+  assert.doesNotMatch(css, /block-check|time-block\.done/);
+});
 
 test("repeat dialog cancel controls never submit or invoke native validation", () => {
   for (const id of ["closeRuleButton", "cancelRuleButton", "deleteRuleButton"]) {

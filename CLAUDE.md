@@ -14,7 +14,7 @@
 - `src/schedule.js`：时间解析、冲突检测与空档；`src/recurrence.js`：重复实例、移动例外与规则拆分；`src/state.js`：V2 状态迁移；`src/calendar.js`：日期范围；`src/content.js`：内容三态；`src/gesture.js`：长按手势；`src/grid.js`：小时格；`src/group.js`：整组变换；`src/forms.js`：显式表单校验；`src/theme.js`：颜色与对比度；`src/backup.js`：版本化 JSON 备份校验
 - `test/`：Node.js 原生测试；`scripts/serve.mjs`：本地静态服务器
 - 时间在领域层统一表示为当天分钟数，时间轴覆盖 00:00–24:00；支持 1 日、连续 3 日和周一开始的 7 日视图
-- 手动时间块按日期保存在 `blocksByDate`；重复实例由规则动态计算，只在单次修改、移动、完成或取消时写入 `recurrenceExceptions`，跨日期移动使用 `movedToDate` 保持规则归属
+- 手动时间块按日期保存在 `blocksByDate`；重复实例由规则动态计算，只在单次修改、移动或取消时写入 `recurrenceExceptions`，跨日期移动使用 `movedToDate` 保持规则归属；时间块不记录完成状态
 - V2 状态写入浏览器 `localStorage` 的 `timeblock-state-v2`；自动迁移旧单日 `blocks`、V1 状态与已复制的重复时间块
 - 常驻界面采用文字最少化约定：只显示日期、时间、行动与必要数据，图标按钮必须保留可访问名称
 - 所有宽度的“日程”只保留日期范围控制和全宽 24 小时时间轴，不显示进度或辅助面板；桌面/平板使用时间轴内部滚动，移动端时间轴撑开页面并使用页面级滚动

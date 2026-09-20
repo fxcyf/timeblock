@@ -38,7 +38,6 @@ export function materializeRecurringForDate(rules, exceptions, dateKey) {
       start: override?.start ?? rule.start,
       end: override?.end ?? rule.start + rule.duration,
       color: override?.color ?? rule.color ?? "sage",
-      done: override?.done === true,
       sourceRuleId: rule.id,
       recurrenceDate,
       recurring: true,
@@ -57,7 +56,6 @@ export function upsertRecurrenceException(exceptions, rule, dateKey, changes = {
     start: changes.start ?? current?.start ?? rule.start,
     end: changes.end ?? current?.end ?? rule.start + rule.duration,
     color: changes.color ?? current?.color ?? rule.color ?? "sage",
-    done: changes.done ?? current?.done ?? false,
     cancelled: changes.cancelled === true,
   };
   const movedToDate = Object.hasOwn(changes, "movedToDate") ? changes.movedToDate : current?.movedToDate;

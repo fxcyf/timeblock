@@ -79,7 +79,7 @@ let selectedBlockKeys = new Set();
 let lastHourGridMode = null;
 
 const elements = Object.fromEntries([
-  "accentCustomColor", "accentOptions", "actionOptions", "actionPicker", "archiveLibraryContentButton", "archivedEventContentLibrary", "blockCategory", "blockCustomColor", "blockDate", "blockDialog", "blockDialogKicker", "blockDialogTitle", "blockEnd", "blockError", "blockForm", "blockId", "blockOriginalDate", "blockScopeField", "blockStart", "blockTitle", "cancelBlockButton", "cancelContentButton", "cancelGroupButton", "cancelLibraryContentButton", "cancelRuleButton", "cancelSelectionButton", "categoryOptions", "clearDataButton", "clearDoneButton", "closeActionPicker", "closeBlockButton", "closeGroupButton", "closeLibraryContentButton", "closeRuleButton", "contentCategory", "contentError", "contentFavorite", "contentForm", "contentListView", "contentTitle", "copySelectionButton", "dataSummary", "dateEyebrow", "dayOptions", "defaultViewSetting", "deleteBlockButton", "deleteLibraryContentButton", "deleteRuleButton", "deleteSelectionButton", "eventContentLibrary", "exportDataButton", "groupDate", "groupDialog", "groupDialogTitle", "groupError", "groupForm", "groupMode", "groupStart", "importDataButton", "importDataFile", "libraryContentCategory", "libraryContentCustomColor", "libraryContentDialog", "libraryContentDialogTitle", "libraryContentError", "libraryContentForm", "libraryContentId", "libraryContentTitle", "manageView", "newContentButton", "newFavoriteButton", "newRuleButton", "nextRangeButton", "previousRangeButton", "recurringView", "ruleCategory", "ruleCustomColor", "ruleDialog", "ruleDialogTitle", "ruleDuration", "ruleEndDate", "ruleError", "ruleForm", "ruleId", "ruleList", "ruleStart", "ruleStartDate", "ruleTitle", "selectedRange", "selectionCount", "selectionModeButton", "selectionToolbar", "shift15Button", "shift30Button", "snapSetting", "timeAxis", "timeline", "timelineDays", "timelineHeaders", "timelineScroll", "toast", "todayButton", "todayView", "topbar", "undoButton", "viewTitle", "weekStrip",
+  "accentCustomColor", "accentOptions", "actionOptions", "actionPicker", "archiveLibraryContentButton", "archivedEventContentLibrary", "blockCategory", "blockCustomColor", "blockDate", "blockDialog", "blockDialogKicker", "blockDialogTitle", "blockEnd", "blockError", "blockForm", "blockId", "blockOriginalDate", "blockScopeField", "blockStart", "blockTitle", "cancelBlockButton", "cancelContentButton", "cancelGroupButton", "cancelLibraryContentButton", "cancelRuleButton", "cancelSelectionButton", "categoryOptions", "clearDataButton", "closeActionPicker", "closeBlockButton", "closeGroupButton", "closeLibraryContentButton", "closeRuleButton", "contentCategory", "contentError", "contentFavorite", "contentForm", "contentListView", "contentTitle", "copySelectionButton", "dataSummary", "dateEyebrow", "dayOptions", "defaultViewSetting", "deleteBlockButton", "deleteLibraryContentButton", "deleteRuleButton", "deleteSelectionButton", "eventContentLibrary", "exportDataButton", "groupDate", "groupDialog", "groupDialogTitle", "groupError", "groupForm", "groupMode", "groupStart", "importDataButton", "importDataFile", "libraryContentCategory", "libraryContentCustomColor", "libraryContentDialog", "libraryContentDialogTitle", "libraryContentError", "libraryContentForm", "libraryContentId", "libraryContentTitle", "manageView", "newContentButton", "newFavoriteButton", "newRuleButton", "nextRangeButton", "previousRangeButton", "recurringView", "ruleCategory", "ruleCustomColor", "ruleDialog", "ruleDialogTitle", "ruleDuration", "ruleEndDate", "ruleError", "ruleForm", "ruleId", "ruleList", "ruleStart", "ruleStartDate", "ruleTitle", "selectedRange", "selectionCount", "selectionModeButton", "selectionToolbar", "shift15Button", "shift30Button", "snapSetting", "timeAxis", "timeline", "timelineDays", "timelineHeaders", "timelineScroll", "toast", "todayButton", "todayView", "topbar", "undoButton", "viewTitle", "weekStrip",
 ].map((id) => [id, document.querySelector(`#${id}`)]));
 
 function toDateKey(date) {
@@ -262,7 +262,7 @@ function blockSelectionKey(dateKey, id) {
 
 function configureBlockArticle(article, block, dateKey, segment = null) {
   const selected = selectedBlockKeys.has(blockSelectionKey(dateKey, block.id));
-  article.className = `time-block${segment ? " hour-segment" : ""}${block.done ? " done" : ""}${block.end - block.start <= 30 ? " compact" : ""}${selected ? " selected" : ""}`;
+  article.className = `time-block${segment ? " hour-segment" : ""}${block.end - block.start <= 30 ? " compact" : ""}${selected ? " selected" : ""}`;
   article.dataset.id = block.id;
   article.dataset.date = dateKey;
   article.dataset.recurring = block.recurring ? "true" : "false";
@@ -272,10 +272,9 @@ function configureBlockArticle(article, block, dateKey, segment = null) {
   article.setAttribute("aria-pressed", selectionMode ? String(selected) : "false");
   article.setAttribute("aria-label", `${block.category ? `${block.category}，` : ""}${block.title}，${dateKey} ${formatTime(block.start)} 到 ${displayScheduleTime(block.end)}${selectionMode ? "，点击选择，拖动已选项可移动整组" : "，点击编辑"}`);
   const showMeta = !segment || segment.first;
-  const showCheck = !segment || segment.first;
-  article.innerHTML = `${showMeta ? `<span class="block-meta"><span>${formatTime(block.start)} — ${displayScheduleTime(block.end)}</span>${block.category ? `<span class="block-category">${escapeHtml(block.category)}</span>` : ""}</span>` : ""}<strong class="block-title">${escapeHtml(block.title)}</strong>${showCheck ? `<button type="button" class="block-check" aria-label="${block.done ? "标记为未完成" : "标记为已完成"}"><svg><use href="#icon-check"></use></svg></button>` : ""}${segment ? "" : '<span class="resize-handle" aria-hidden="true"></span>'}`;
+  article.innerHTML = `${showMeta ? `<span class="block-meta"><span>${formatTime(block.start)} — ${displayScheduleTime(block.end)}</span>${block.category ? `<span class="block-category">${escapeHtml(block.category)}</span>` : ""}</span>` : ""}<strong class="block-title">${escapeHtml(block.title)}</strong>${segment ? "" : '<span class="resize-handle" aria-hidden="true"></span>'}`;
   article.addEventListener("click", (event) => {
-    if (Date.now() < ignoreBlockClickUntil || event.target.closest(".block-check")) return;
+    if (Date.now() < ignoreBlockClickUntil) return;
     if (selectionMode) toggleBlockSelection(dateKey, block.id);
     else openBlockDialog(block.id, dateKey);
   });
@@ -285,7 +284,6 @@ function configureBlockArticle(article, block, dateKey, segment = null) {
     if (selectionMode) toggleBlockSelection(dateKey, block.id);
     else openBlockDialog(block.id, dateKey);
   });
-  article.querySelector(".block-check")?.addEventListener("click", (event) => { event.stopPropagation(); toggleDone(block.id, dateKey); });
   article.addEventListener("pointerdown", startBlockPointerInteraction);
 }
 
@@ -422,7 +420,7 @@ function openBlockDialog(id, dateKey) {
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
     const requested = dateKey === todayDateKey ? Math.ceil(currentMinutes / state.settings.snapMinutes) * state.settings.snapMinutes : DAY_START;
     const slot = findNextFreeSlot(blocksForDate(dateKey), requested, DEFAULT_BLOCK_DURATION, DAY_START, DAY_END) || { start: DAY_START, end: DEFAULT_BLOCK_DURATION };
-    draft = { title: "", category: null, start: slot.start, end: slot.end, color: "apricot", done: false };
+    draft = { title: "", category: null, start: slot.start, end: slot.end, color: "apricot" };
   }
   elements.blockForm.reset();
   elements.blockError.textContent = "";
@@ -456,7 +454,6 @@ function blockDraftFromForm(existing) {
     start: parseScheduleTime(elements.blockStart.value),
     end: parseScheduleTime(elements.blockEnd.value, true),
     color: readColorChoice(elements.blockForm, "blockColor", elements.blockCustomColor),
-    done: existing?.done === true,
   };
 }
 
@@ -534,20 +531,6 @@ function deleteBlock() {
   }
   elements.blockDialog.close();
   commitChange(previous, scope === "future" ? "这一次及以后的日程已删除" : "时间块已删除");
-}
-
-function toggleDone(id, dateKey) {
-  const block = findBlock(dateKey, id);
-  if (!block) return;
-  const previous = cloneState();
-  const nextDone = !block.done;
-  if (block.recurring) {
-    const rule = state.rules.find((item) => item.id === block.sourceRuleId);
-    state.recurrenceExceptions = upsertRecurrenceException(state.recurrenceExceptions, rule, block.recurrenceDate || dateKey, { ...block, movedToDate: dateKey === (block.recurrenceDate || dateKey) ? null : dateKey, done: nextDone });
-  } else {
-    setManualBlocksForDate(dateKey, manualBlocksForDate(dateKey).map((item) => item.id === id ? { ...item, done: nextDone } : item));
-  }
-  commitChange(previous, nextDone ? "完成一项" : "已恢复");
 }
 
 function buildDayOptions(selectedDays = [1, 2, 3, 4, 5]) {
@@ -911,7 +894,7 @@ function createBlockFromContent(content, previousOverride = null) {
   const range = { ...activeSelection };
   if (hasConflict(range, blocksForDate(range.date))) { clearTimelineSelection(); showToast("这段时间已有安排，请重新划选"); return; }
   const previous = previousOverride || cloneState();
-  setManualBlocksForDate(range.date, [...manualBlocksForDate(range.date), { id: `block-${Date.now()}`, ...(content.id ? { contentId: content.id } : {}), title: content.title, category: content.category || null, start: range.start, end: range.end, color: content.color || "apricot", done: false }]);
+  setManualBlocksForDate(range.date, [...manualBlocksForDate(range.date), { id: `block-${Date.now()}`, ...(content.id ? { contentId: content.id } : {}), title: content.title, category: content.category || null, start: range.start, end: range.end, color: content.color || "apricot" }]);
   clearTimelineSelection();
   commitChange(previous, `${displayScheduleTime(range.start)}—${displayScheduleTime(range.end)} 已安排`);
 }
@@ -1357,18 +1340,6 @@ document.querySelectorAll("[data-view-days]").forEach((button) => button.addEven
 elements.previousRangeButton.addEventListener("click", () => changeVisibleRange(-1));
 elements.nextRangeButton.addEventListener("click", () => changeVisibleRange(1));
 elements.todayButton.addEventListener("click", goToToday);
-elements.clearDoneButton.addEventListener("click", () => {
-  const completed = visibleDateKeys().flatMap((dateKey) => blocksForDate(dateKey).map((block) => ({ ...block, dateKey }))).filter((block) => block.done);
-  if (!completed.length) { showToast("当前范围没有已完成项"); return; }
-  const previous = cloneState();
-  for (const block of completed) {
-    if (block.recurring) {
-      const rule = state.rules.find((item) => item.id === block.sourceRuleId);
-      state.recurrenceExceptions = upsertRecurrenceException(state.recurrenceExceptions, rule, block.recurrenceDate || block.dateKey, { cancelled: true });
-    } else setManualBlocksForDate(block.dateKey, manualBlocksForDate(block.dateKey).filter((item) => item.id !== block.id));
-  }
-  commitChange(previous, `已清理 ${completed.length} 个完成项`);
-});
 elements.closeActionPicker.addEventListener("click", clearTimelineSelection);
 elements.newContentButton.addEventListener("click", openContentForm);
 elements.cancelContentButton.addEventListener("click", () => showContentList(true));

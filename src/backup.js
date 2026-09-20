@@ -94,7 +94,6 @@ function normalizeBlock(block) {
     start,
     end,
     color: paletteColor(block.color),
-    done: block.done === true,
   };
   if (Object.hasOwn(block, "category")) normalized.category = optionalText(block.category, "时间块分类");
   if (Object.hasOwn(block, "contentId")) normalized.contentId = requiredText(block.contentId, "事件内容引用");
@@ -116,7 +115,6 @@ function normalizeException(exception) {
     start,
     end,
     color: paletteColor(exception.color, "sage"),
-    done: exception.done === true,
     cancelled: exception.cancelled === true,
   };
   if (exception.movedToDate) normalized.movedToDate = dateKey(exception.movedToDate, "例外移动日期");

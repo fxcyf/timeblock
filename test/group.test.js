@@ -24,11 +24,11 @@ test("moves a cross-date group atomically while allowing selected positions to b
   assert.deepEqual(plan.candidates.map((item) => [item.targetDate, item.block.start]), [["2026-09-01", 600], ["2026-09-01", 660], ["2026-09-02", 630]]);
 });
 
-test("copies with new IDs, resets completion, and detaches recurring instances", () => {
+test("copies with new IDs, drops legacy completion, and detaches recurring instances", () => {
   const plan = planGroupTransform({ items: selected, targetDate: "2026-09-01", targetStart: 600, mode: "copy", existingByDate: {}, createId: (_, index) => `copy-${index}` });
   assert.equal(plan.ok, true);
   assert.deepEqual(plan.candidates.map((item) => item.block.id), ["copy-0", "copy-1", "copy-2"]);
-  assert.ok(plan.candidates.every((item) => item.block.done === false && !item.block.recurring && !item.block.sourceRuleId));
+  assert.ok(plan.candidates.every((item) => !Object.hasOwn(item.block, "done") && !item.block.recurring && !item.block.sourceRuleId));
 });
 
 test("rejects the whole group on boundaries or external conflicts", () => {

@@ -29,7 +29,7 @@ test("derives recurring instances from rules and their active date range", () =>
   assert.equal(materializeRecurringForDate([{ ...rule, endDate: "2026-08-24" }], [], "2026-08-25").length, 0);
 });
 
-test("stores one-date edits, completion, and cancellation as exceptions", () => {
+test("stores one-date edits and cancellation as exceptions without completion state", () => {
   let exceptions = upsertRecurrenceException([], rule, "2026-08-25", {
     title: "晚一点训练",
     start: 1260,
@@ -39,7 +39,8 @@ test("stores one-date edits, completion, and cancellation as exceptions", () => 
   let [instance] = materializeRecurringForDate([rule], exceptions, "2026-08-25");
   assert.equal(instance.title, "晚一点训练");
   assert.equal(instance.start, 1260);
-  assert.equal(instance.done, true);
+  assert.equal(Object.hasOwn(exceptions[0], "done"), false);
+  assert.equal(Object.hasOwn(instance, "done"), false);
 
   exceptions = upsertRecurrenceException(exceptions, rule, "2026-08-25", { cancelled: true });
   assert.deepEqual(materializeRecurringForDate([rule], exceptions, "2026-08-25"), []);
@@ -55,8 +56,8 @@ test("moves one recurring occurrence to another date without changing its rule",
 
 test("keeps a materialized historical exception visible while its rule is paused", () => {
   const pausedRule = { ...rule, enabled: false, inactiveRanges: [] };
-  const exceptions = upsertRecurrenceException([], rule, "2026-08-25", { done: true });
-  assert.equal(materializeRecurringForDate([pausedRule], exceptions, "2026-08-25")[0].done, true);
+  const exceptions = upsertRecurrenceException([], rule, "2026-08-25", { start: 1215, end: 1275 });
+  assert.equal(materializeRecurringForDate([pausedRule], exceptions, "2026-08-25")[0].start, 1215);
   assert.deepEqual(materializeRecurringForDate([pausedRule], exceptions, "2026-08-27"), []);
 });
 

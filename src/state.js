@@ -24,19 +24,24 @@ function normalizeContent(content, index) {
   return { ...rest, status, category: content.category || null, color: normalizeColorValue(content.color, "apricot"), sortOrder: Number.isInteger(content.sortOrder) ? content.sortOrder : index };
 }
 
+function withoutCompletion(item) {
+  const { done, ...rest } = item;
+  return rest;
+}
+
 export function migrateAppState(saved, todayDateKey, defaults = {}) {
   const source = saved && typeof saved === "object" ? saved : {};
   const rules = (Array.isArray(source.rules) ? source.rules : (defaults.rules || [])).map(normalizeRule);
   const eventContents = (Array.isArray(source.eventContents) ? source.eventContents : (defaults.eventContents || [])).map(normalizeContent);
   const sourceBlocks = migrateBlocksByDate(source);
   const blocksByDate = {};
-  const recurrenceExceptions = Array.isArray(source.recurrenceExceptions) ? [...source.recurrenceExceptions] : [];
+  const recurrenceExceptions = Array.isArray(source.recurrenceExceptions) ? source.recurrenceExceptions.map(withoutCompletion) : [];
 
   for (const [dateKey, blocks] of Object.entries(sourceBlocks)) {
     blocksByDate[dateKey] = [];
     for (const block of blocks) {
       if (!block.sourceRuleId) {
-        blocksByDate[dateKey].push(block);
+        blocksByDate[dateKey].push(withoutCompletion(block));
         continue;
       }
       if (recurrenceExceptions.some((item) => item.ruleId === block.sourceRuleId && item.date === dateKey)) continue;
@@ -49,7 +54,6 @@ export function migrateAppState(saved, todayDateKey, defaults = {}) {
         start: block.start,
         end: block.end,
         color: block.color || "sage",
-        done: block.done === true,
         cancelled: false,
       });
     }
