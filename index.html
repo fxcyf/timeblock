@@ -25,6 +25,7 @@
       <symbol id="icon-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></symbol>
       <symbol id="icon-move" viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M8 7l4-4 4 4M8 17l4 4 4-4M7 8l-4 4 4 4M17 8l4 4-4 4"/></symbol>
       <symbol id="icon-archive" viewBox="0 0 24 24"><path d="M4 8h16v12H4zM3 4h18v4H3zM9 12h6"/></symbol>
+      <symbol id="icon-sync" viewBox="0 0 24 24"><path d="M20 7h-5V2"/><path d="m20 2-3.5 3.5A8 8 0 0 0 4.3 9"/><path d="M4 17h5v5"/><path d="m4 22 3.5-3.5A8 8 0 0 0 19.7 15"/></symbol>
     </svg>
 
     <div class="app-shell">
@@ -51,6 +52,7 @@
               <button type="button" data-view-days="3" aria-label="显示三天">3 日</button>
               <button type="button" data-view-days="7" aria-label="显示一周">7 日</button>
             </div>
+            <button type="button" class="icon-button schedule-sync-button" id="scheduleSyncButton" aria-label="立即同步云端数据" title="立即同步云端数据" hidden><svg><use href="#icon-sync"></use></svg></button>
             <button type="button" class="icon-button today-control" id="todayButton" aria-label="回到今天">今</button>
             <button class="secondary-button select-mode-button" id="selectionModeButton" type="button">选择</button>
           </div>

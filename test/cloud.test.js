@@ -110,9 +110,10 @@ test("completes an email-confirmation callback and removes tokens from app conce
 });
 
 test("ships login controls and an RLS-isolated schema without secret keys", () => {
-  for (const id of ["cloudAuthForm", "cloudEmail", "cloudPassword", "cloudSyncButton", "cloudUseRemoteButton", "cloudUseLocalButton"]) {
+  for (const id of ["cloudAuthForm", "cloudEmail", "cloudPassword", "cloudSyncButton", "scheduleSyncButton", "cloudUseRemoteButton", "cloudUseLocalButton"]) {
     assert.match(html, new RegExp(`id="${id}"`));
   }
+  assert.match(html, /id="scheduleSyncButton"[^>]*aria-label="立即同步云端数据"[^>]*hidden/);
   assert.match(schema, /enable row level security/i);
   assert.match(schema, /auth\.uid\(\)\) = user_id/g);
   assert.match(schema, /revoke all .* from anon/i);

@@ -93,7 +93,7 @@ let pendingCloudRecord = null;
 const cloud = createSupabaseCloud({ projectUrl: SUPABASE_URL, publishableKey: SUPABASE_PUBLISHABLE_KEY });
 
 const elements = Object.fromEntries([
-  "accentCustomColor", "accentOptions", "actionOptions", "actionPicker", "archiveLibraryContentButton", "archivedEventContentLibrary", "blockCategory", "blockCustomColor", "blockDate", "blockDialog", "blockDialogKicker", "blockDialogTitle", "blockEnd", "blockError", "blockForm", "blockId", "blockOriginalDate", "blockScopeField", "blockStart", "blockTitle", "cancelBlockButton", "cancelContentButton", "cancelGroupButton", "cancelLibraryContentButton", "cancelRuleButton", "cancelSelectionButton", "categoryOptions", "clearDataButton", "closeActionPicker", "closeBlockButton", "closeGroupButton", "closeLibraryContentButton", "closeRuleButton", "cloudAccount", "cloudAccountEmail", "cloudAuthForm", "cloudConflict", "cloudEmail", "cloudPassword", "cloudSignInButton", "cloudSignOutButton", "cloudSignUpButton", "cloudStatus", "cloudSyncButton", "cloudSyncStatus", "cloudUseLocalButton", "cloudUseRemoteButton", "contentCategory", "contentError", "contentFavorite", "contentForm", "contentListView", "contentTitle", "copySelectionButton", "dataSummary", "dateEyebrow", "dayOptions", "defaultViewSetting", "deleteBlockButton", "deleteLibraryContentButton", "deleteRuleButton", "deleteSelectionButton", "eventContentLibrary", "exportDataButton", "groupDate", "groupDialog", "groupDialogTitle", "groupError", "groupForm", "groupMode", "groupStart", "importDataButton", "importDataFile", "libraryContentCategory", "libraryContentCustomColor", "libraryContentDialog", "libraryContentDialogTitle", "libraryContentError", "libraryContentForm", "libraryContentId", "libraryContentTitle", "manageView", "newContentButton", "newFavoriteButton", "newRuleButton", "nextRangeButton", "previousRangeButton", "recurringView", "ruleCategory", "ruleCustomColor", "ruleDialog", "ruleDialogTitle", "ruleDuration", "ruleEndDate", "ruleError", "ruleForm", "ruleId", "ruleList", "ruleStart", "ruleStartDate", "ruleTitle", "selectedRange", "selectionCount", "selectionModeButton", "selectionToolbar", "shift15Button", "shift30Button", "snapSetting", "timeAxis", "timeline", "timelineDays", "timelineHeaders", "timelineScroll", "toast", "todayButton", "todayView", "topbar", "undoButton", "viewTitle", "weekStrip",
+  "accentCustomColor", "accentOptions", "actionOptions", "actionPicker", "archiveLibraryContentButton", "archivedEventContentLibrary", "blockCategory", "blockCustomColor", "blockDate", "blockDialog", "blockDialogKicker", "blockDialogTitle", "blockEnd", "blockError", "blockForm", "blockId", "blockOriginalDate", "blockScopeField", "blockStart", "blockTitle", "cancelBlockButton", "cancelContentButton", "cancelGroupButton", "cancelLibraryContentButton", "cancelRuleButton", "cancelSelectionButton", "categoryOptions", "clearDataButton", "closeActionPicker", "closeBlockButton", "closeGroupButton", "closeLibraryContentButton", "closeRuleButton", "cloudAccount", "cloudAccountEmail", "cloudAuthForm", "cloudConflict", "cloudEmail", "cloudPassword", "cloudSignInButton", "cloudSignOutButton", "cloudSignUpButton", "cloudStatus", "cloudSyncButton", "cloudSyncStatus", "cloudUseLocalButton", "cloudUseRemoteButton", "contentCategory", "contentError", "contentFavorite", "contentForm", "contentListView", "contentTitle", "copySelectionButton", "dataSummary", "dateEyebrow", "dayOptions", "defaultViewSetting", "deleteBlockButton", "deleteLibraryContentButton", "deleteRuleButton", "deleteSelectionButton", "eventContentLibrary", "exportDataButton", "groupDate", "groupDialog", "groupDialogTitle", "groupError", "groupForm", "groupMode", "groupStart", "importDataButton", "importDataFile", "libraryContentCategory", "libraryContentCustomColor", "libraryContentDialog", "libraryContentDialogTitle", "libraryContentError", "libraryContentForm", "libraryContentId", "libraryContentTitle", "manageView", "newContentButton", "newFavoriteButton", "newRuleButton", "nextRangeButton", "previousRangeButton", "recurringView", "ruleCategory", "ruleCustomColor", "ruleDialog", "ruleDialogTitle", "ruleDuration", "ruleEndDate", "ruleError", "ruleForm", "ruleId", "ruleList", "ruleStart", "ruleStartDate", "ruleTitle", "scheduleSyncButton", "selectedRange", "selectionCount", "selectionModeButton", "selectionToolbar", "shift15Button", "shift30Button", "snapSetting", "timeAxis", "timeline", "timelineDays", "timelineHeaders", "timelineScroll", "toast", "todayButton", "todayView", "topbar", "undoButton", "viewTitle", "weekStrip",
 ].map((id) => [id, document.querySelector(`#${id}`)]));
 
 function toDateKey(date) {
@@ -237,6 +237,13 @@ function renderCloudSync() {
   elements.cloudConflict.hidden = !session || !pendingCloudRecord;
   elements.cloudAccountEmail.textContent = session?.user?.email || "";
   elements.cloudSyncStatus.textContent = cloudSyncText;
+  elements.scheduleSyncButton.hidden = !session;
+  elements.scheduleSyncButton.disabled = cloudSyncBusy;
+  elements.scheduleSyncButton.classList.toggle("syncing", cloudSyncBusy);
+  elements.scheduleSyncButton.classList.toggle("needs-attention", Boolean(pendingCloudRecord));
+  const scheduleSyncLabel = pendingCloudRecord ? "处理云端同步冲突" : cloudSyncBusy ? "正在同步云端数据" : "立即同步云端数据";
+  elements.scheduleSyncButton.setAttribute("aria-label", scheduleSyncLabel);
+  elements.scheduleSyncButton.title = cloudSyncText || scheduleSyncLabel;
   for (const button of [elements.cloudSignInButton, elements.cloudSignUpButton, elements.cloudSyncButton, elements.cloudSignOutButton, elements.cloudUseLocalButton, elements.cloudUseRemoteButton]) {
     button.disabled = cloudSyncBusy;
   }
@@ -323,6 +330,15 @@ function scheduleCloudSync() {
   cloudSyncText = navigator.onLine ? "等待同步…" : "离线，联网后自动同步";
   renderCloudSync();
   cloudSyncTimer = setTimeout(() => syncCloud(), 900);
+}
+
+function syncFromSchedule() {
+  if (pendingCloudRecord) {
+    switchView("manage");
+    showToast("请先选择要保留的同步版本");
+    return;
+  }
+  syncCloud({ notify: true });
 }
 
 async function initializeCloud() {
@@ -1616,6 +1632,7 @@ elements.clearDataButton.addEventListener("click", clearAllData);
 elements.cloudAuthForm.addEventListener("submit", signInToCloud);
 elements.cloudSignUpButton.addEventListener("click", signUpForCloud);
 elements.cloudSyncButton.addEventListener("click", () => syncCloud({ notify: true }));
+elements.scheduleSyncButton.addEventListener("click", syncFromSchedule);
 elements.cloudSignOutButton.addEventListener("click", signOutOfCloud);
 elements.cloudUseRemoteButton.addEventListener("click", () => resolveCloudConflict(true));
 elements.cloudUseLocalButton.addEventListener("click", () => resolveCloudConflict(false));

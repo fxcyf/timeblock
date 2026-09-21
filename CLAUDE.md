@@ -21,7 +21,7 @@
 - 手机和平板的 1 日视图使用 24 行 × 4 个 15 分钟格；空白格长按后才进入划选，手指先移动则继续原生滚动；桌面单日及所有 3/7 日视图保持纵向时间轴
 - 内容状态为 `oneTime` / `favorite` / `archived`；旧 `favorite:false` 只迁移为 `oneTime`；“管理”页提供常用内容归档、恢复和删除
 - “管理”页集中提供强调色/自定义内容颜色、视图偏好、V3 JSON 备份导入导出与清空；应用本地状态仍为 V2、存储键不变
-- 云同步使用 `src/cloud-config.js` 中可公开的 Supabase URL/Publishable key；注册邮件显式回到当前应用路径；未登录时仍只用本地数据，登录后自动推拉完整 V2 状态，双端同时修改时必须显式选择版本；`supabase/schema.sql` 以 RLS 按 `auth.uid()` 隔离用户数据，禁止前端使用 secret/service-role key
+- 云同步使用 `src/cloud-config.js` 中可公开的 Supabase URL/Publishable key；注册邮件显式回到当前应用路径；未登录时仍只用本地数据，登录后自动推拉完整 V2 状态，日程工具栏提供立即同步按钮，双端同时修改时必须显式选择版本；`supabase/schema.sql` 以 RLS 按 `auth.uid()` 隔离用户数据，禁止前端使用 secret/service-role key
 - 日程工具栏固定在可见区域；多选支持复制、删除和拖动任意已选项来移动整组，先校验边界与冲突再原子保存并提供一次撤销
 - 触屏窄视口使用 `viewport-fit=cover` 适配 iPadOS 安全区；顶部工具栏和底部导航保留 8px 视觉间距，编辑弹窗居中，内容选择器、多选工具栏和反馈均避开底部导航
 - 重复表单只在保存时显式校验，关闭、取消和 Escape 无条件退出；重复实例编辑/删除支持“仅这一次”和“这一次及以后”

@@ -66,6 +66,10 @@ svg { width: 1.25rem; height: 1.25rem; fill: none; stroke: currentColor; stroke-
 .view-range-control button { min-width: 56px; min-height: 40px; padding: 0 12px; border: 0; border-radius: 8px; color: var(--muted); background: transparent; cursor: pointer; font-size: .875rem; font-weight: 650; }
 .view-range-control button.active { color: var(--on-accent); background: var(--accent); }
 .today-control { font-weight: 750; }
+.schedule-sync-button { color: var(--accent-dark); }
+.schedule-sync-button.needs-attention { color: var(--danger); background: #fff0ee; }
+.schedule-sync-button.syncing svg { animation: sync-spin .8s linear infinite; }
+@keyframes sync-spin { to { transform: rotate(360deg); } }
 .select-mode-button { min-height: 40px; padding-inline: 13px; }
 .select-mode-button.active { border-color: var(--accent); color: var(--accent-dark); background: var(--accent-soft); }
 
@@ -328,6 +332,7 @@ html.touch-selecting-page body { position: fixed; right: 0; left: 0; width: 100%
   .date-navigation p { flex: 1; min-width: 0; font-size: .9375rem; white-space: nowrap; }
   .topbar-actions { gap: 4px; }
   .topbar-actions > .icon-button { display: none; }
+  .topbar-actions > .schedule-sync-button { display: grid; }
   .view-range-control button { min-width: 40px; min-height: 44px; padding: 0 7px; font-size: .75rem; }
   .select-mode-button { min-height: 44px; padding-inline: 10px; font-size: .82rem; }
   .timeline-card { overflow: visible; border: 0; border-radius: 0; }
