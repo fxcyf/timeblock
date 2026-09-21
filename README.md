@@ -19,7 +19,8 @@
 - **动态重复日程**：规则按星期和生效日期动态生成实例，可编辑、暂停和删除；单个实例支持“仅这一次”和“这一次及以后”，移动单次实例仍保留规则归属。
 - **快速恢复**：删除、移动、规则与常用内容修改后可立即撤销一次。
 - **柔性提醒**：冲突时不覆盖原安排，排得太满时提示给切换和休息留时间。
-- **本地优先**：V2 数据保存在浏览器 `localStorage`，无需账号或后端；时间块只表达安排，不记录完成状态。“管理”页可导出/导入 V3 JSON 备份、调整时间吸附、默认视图和强调色，或确认后清空。
+- **本地优先与可选云同步**：V2 数据始终先保存在浏览器 `localStorage`，无需登录即可使用；登录后通过 Supabase 自动同步到其他设备，离线修改会在恢复网络后上传，双端同时修改时由用户明确选择版本。
+- **数据管理**：时间块只表达安排，不记录完成状态。“管理”页可导出/导入 V3 JSON 备份、调整时间吸附、默认视图和强调色，或确认后清空。
 - **更易阅读**：正文以 17px 为基准，桌面操作区不低于 40px、触屏操作区不低于 44px；统一主题焦点环，不依赖浏览器默认黑色描边。
 - **安全区适配**：移动端顶部工具栏和底部导航均与屏幕边缘留白，底部导航采用完整圆角边框；编辑弹窗居中显示，内容选择、多选操作和撤销反馈不会占用底部高频导航区。
 
@@ -40,6 +41,16 @@ npm start
 仓库使用 GitHub Pages 自动部署。推送到 `main` 后，`.github/workflows/static.yml` 会发布当前静态站点，无需自建服务器或手动上传文件。
 
 首次部署需要在仓库 Settings → Pages 中将 Source 设为 **GitHub Actions**；后续更新均由工作流自动完成。
+
+### Supabase 云同步初始化
+
+前端只包含可公开的 Project URL 与 Publishable key。首次启用云同步前还需要：
+
+1. 在 Supabase Dashboard → SQL Editor 执行 `supabase/schema.sql`，创建 `timeblock_states` 并启用按用户隔离的 RLS。
+2. 在 Authentication → URL Configuration 将 Site URL 设为 `https://fxcyf.github.io/timeblock/`，并把该地址及本地开发地址 `http://localhost:4173/` 加入 Redirect URLs。
+3. 确认 Email 登录已启用。若开启邮箱确认，新用户需先点击验证邮件再登录。
+
+Publishable key 出现在浏览器和仓库中是正常的；不要把 `sb_secret_...`、`service_role` 或数据库密码写入前端。数据访问由登录令牌和 `supabase/schema.sql` 中的 RLS 共同限制。
 
 ## 测试
 
@@ -66,6 +77,9 @@ src/group.js           多选复制、直接拖动与整体移动的原子预检
 src/forms.js           重复表单显式校验
 src/theme.js           预设/自定义颜色、对比度与主题令牌
 src/backup.js          V3 JSON 备份生成、兼容导入与数据校验
+src/cloud.js           Supabase 登录、会话刷新、云状态读写与同步决策
+src/cloud-config.js    可公开的 Supabase 项目配置
+supabase/schema.sql    云状态表、授权和用户级 RLS
 test/schedule.test.js  Node.js 原生测试
 test/calendar.test.js  多日范围与迁移测试
 test/gesture.test.js   长按移动容差测试
@@ -78,5 +92,6 @@ test/group.test.js     整组操作、边界与冲突测试
 test/layout.test.js    iPadOS 安全区与移动端边缘间距测试
 test/forms.test.js     重复表单取消与保存校验测试
 test/theme.test.js     自定义颜色和文字对比度测试
+test/cloud.test.js     云认证请求、同步决策、RLS 与公开配置测试
 scripts/serve.mjs      零依赖本地静态服务器
 ```

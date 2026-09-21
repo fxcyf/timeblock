@@ -11,7 +11,7 @@
 
 - 零依赖响应式 Web 原型，使用原生 HTML、CSS 和 ECMAScript modules
 - `index.html` / `styles.css` / `app.js`：页面结构、视觉与交互状态
-- `src/schedule.js`：时间解析、冲突检测与空档；`src/recurrence.js`：重复实例、移动例外与规则拆分；`src/state.js`：V2 状态迁移；`src/calendar.js`：日期范围；`src/content.js`：内容三态；`src/gesture.js`：长按手势；`src/grid.js`：小时格；`src/group.js`：整组变换；`src/forms.js`：显式表单校验；`src/theme.js`：颜色与对比度；`src/backup.js`：版本化 JSON 备份校验
+- `src/schedule.js`：时间解析、冲突检测与空档；`src/recurrence.js`：重复实例、移动例外与规则拆分；`src/state.js`：V2 状态迁移；`src/calendar.js`：日期范围；`src/content.js`：内容三态；`src/gesture.js`：长按手势；`src/grid.js`：小时格；`src/group.js`：整组变换；`src/forms.js`：显式表单校验；`src/theme.js`：颜色与对比度；`src/backup.js`：版本化 JSON 备份校验；`src/cloud.js`：Supabase Auth/REST 与同步决策
 - `test/`：Node.js 原生测试；`scripts/serve.mjs`：本地静态服务器
 - 时间在领域层统一表示为当天分钟数，时间轴覆盖 00:00–24:00；支持 1 日、连续 3 日和周一开始的 7 日视图
 - 手动时间块按日期保存在 `blocksByDate`；重复实例由规则动态计算，只在单次修改、移动或取消时写入 `recurrenceExceptions`，跨日期移动使用 `movedToDate` 保持规则归属；时间块不记录完成状态
@@ -21,6 +21,7 @@
 - 手机和平板的 1 日视图使用 24 行 × 4 个 15 分钟格；空白格长按后才进入划选，手指先移动则继续原生滚动；桌面单日及所有 3/7 日视图保持纵向时间轴
 - 内容状态为 `oneTime` / `favorite` / `archived`；旧 `favorite:false` 只迁移为 `oneTime`；“管理”页提供常用内容归档、恢复和删除
 - “管理”页集中提供强调色/自定义内容颜色、视图偏好、V3 JSON 备份导入导出与清空；应用本地状态仍为 V2、存储键不变
+- 云同步使用 `src/cloud-config.js` 中可公开的 Supabase URL/Publishable key；未登录时仍只用本地数据，登录后自动推拉完整 V2 状态，双端同时修改时必须显式选择版本；`supabase/schema.sql` 以 RLS 按 `auth.uid()` 隔离用户数据，禁止前端使用 secret/service-role key
 - 日程工具栏固定在可见区域；多选支持复制、删除和拖动任意已选项来移动整组，先校验边界与冲突再原子保存并提供一次撤销
 - 触屏窄视口使用 `viewport-fit=cover` 适配 iPadOS 安全区；顶部工具栏和底部导航保留 8px 视觉间距，编辑弹窗居中，内容选择器、多选工具栏和反馈均避开底部导航
 - 重复表单只在保存时显式校验，关闭、取消和 Escape 无条件退出；重复实例编辑/删除支持“仅这一次”和“这一次及以后”

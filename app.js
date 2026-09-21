@@ -22,6 +22,8 @@ import {
 import { addDateKeyDays, dateFromKey, visibleDateKeys as buildVisibleDateKeys } from "./src/calendar.js";
 import { hasMovedBeyondTolerance } from "./src/gesture.js";
 import { createBackup, parseBackup } from "./src/backup.js";
+import { createSupabaseCloud, resolveSyncAction } from "./src/cloud.js";
+import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./src/cloud-config.js";
 import { migrateAppState } from "./src/state.js";
 import { validateRuleDraft } from "./src/forms.js";
 import { gridCellAtPoint, gridSelectionRange, splitBlockIntoHourSegments } from "./src/grid.js";
@@ -42,6 +44,8 @@ const LONG_PRESS_DELAY = 360;
 const LONG_PRESS_MOVE_TOLERANCE = 8;
 const STORAGE_KEY = "timeblock-state-v2";
 const LEGACY_STORAGE_KEY = "timeblock-state-v1";
+const LOCAL_UPDATED_AT_KEY = "timeblock-local-updated-at";
+const SYNC_METADATA_KEY = "timeblock-sync-metadata";
 const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
 const DAY_NAMES = ["日", "一", "二", "三", "四", "五", "六"];
 const FULL_DAY_NAMES = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
@@ -62,7 +66,10 @@ const defaultEventContents = [
 
 let now = new Date();
 let todayDateKey = toDateKey(now);
+let hasLocalState = hasStoredState();
 let state = loadState();
+let localUpdatedAt = readStorageValue(LOCAL_UPDATED_AT_KEY);
+let syncMetadata = readStoredJson(SYNC_METADATA_KEY, {});
 let focusDateKey = todayDateKey;
 let viewDayCount = state.settings.viewDayCount;
 let activeView = "today";
@@ -77,9 +84,16 @@ let suppressContextMenuUntil = 0;
 let selectionMode = false;
 let selectedBlockKeys = new Set();
 let lastHourGridMode = null;
+let cloudStatusText = "本地数据无需登录即可使用";
+let cloudSyncText = "";
+let cloudSyncBusy = false;
+let cloudSyncTimer = null;
+let pendingCloudRecord = null;
+
+const cloud = createSupabaseCloud({ projectUrl: SUPABASE_URL, publishableKey: SUPABASE_PUBLISHABLE_KEY });
 
 const elements = Object.fromEntries([
-  "accentCustomColor", "accentOptions", "actionOptions", "actionPicker", "archiveLibraryContentButton", "archivedEventContentLibrary", "blockCategory", "blockCustomColor", "blockDate", "blockDialog", "blockDialogKicker", "blockDialogTitle", "blockEnd", "blockError", "blockForm", "blockId", "blockOriginalDate", "blockScopeField", "blockStart", "blockTitle", "cancelBlockButton", "cancelContentButton", "cancelGroupButton", "cancelLibraryContentButton", "cancelRuleButton", "cancelSelectionButton", "categoryOptions", "clearDataButton", "closeActionPicker", "closeBlockButton", "closeGroupButton", "closeLibraryContentButton", "closeRuleButton", "contentCategory", "contentError", "contentFavorite", "contentForm", "contentListView", "contentTitle", "copySelectionButton", "dataSummary", "dateEyebrow", "dayOptions", "defaultViewSetting", "deleteBlockButton", "deleteLibraryContentButton", "deleteRuleButton", "deleteSelectionButton", "eventContentLibrary", "exportDataButton", "groupDate", "groupDialog", "groupDialogTitle", "groupError", "groupForm", "groupMode", "groupStart", "importDataButton", "importDataFile", "libraryContentCategory", "libraryContentCustomColor", "libraryContentDialog", "libraryContentDialogTitle", "libraryContentError", "libraryContentForm", "libraryContentId", "libraryContentTitle", "manageView", "newContentButton", "newFavoriteButton", "newRuleButton", "nextRangeButton", "previousRangeButton", "recurringView", "ruleCategory", "ruleCustomColor", "ruleDialog", "ruleDialogTitle", "ruleDuration", "ruleEndDate", "ruleError", "ruleForm", "ruleId", "ruleList", "ruleStart", "ruleStartDate", "ruleTitle", "selectedRange", "selectionCount", "selectionModeButton", "selectionToolbar", "shift15Button", "shift30Button", "snapSetting", "timeAxis", "timeline", "timelineDays", "timelineHeaders", "timelineScroll", "toast", "todayButton", "todayView", "topbar", "undoButton", "viewTitle", "weekStrip",
+  "accentCustomColor", "accentOptions", "actionOptions", "actionPicker", "archiveLibraryContentButton", "archivedEventContentLibrary", "blockCategory", "blockCustomColor", "blockDate", "blockDialog", "blockDialogKicker", "blockDialogTitle", "blockEnd", "blockError", "blockForm", "blockId", "blockOriginalDate", "blockScopeField", "blockStart", "blockTitle", "cancelBlockButton", "cancelContentButton", "cancelGroupButton", "cancelLibraryContentButton", "cancelRuleButton", "cancelSelectionButton", "categoryOptions", "clearDataButton", "closeActionPicker", "closeBlockButton", "closeGroupButton", "closeLibraryContentButton", "closeRuleButton", "cloudAccount", "cloudAccountEmail", "cloudAuthForm", "cloudConflict", "cloudEmail", "cloudPassword", "cloudSignInButton", "cloudSignOutButton", "cloudSignUpButton", "cloudStatus", "cloudSyncButton", "cloudSyncStatus", "cloudUseLocalButton", "cloudUseRemoteButton", "contentCategory", "contentError", "contentFavorite", "contentForm", "contentListView", "contentTitle", "copySelectionButton", "dataSummary", "dateEyebrow", "dayOptions", "defaultViewSetting", "deleteBlockButton", "deleteLibraryContentButton", "deleteRuleButton", "deleteSelectionButton", "eventContentLibrary", "exportDataButton", "groupDate", "groupDialog", "groupDialogTitle", "groupError", "groupForm", "groupMode", "groupStart", "importDataButton", "importDataFile", "libraryContentCategory", "libraryContentCustomColor", "libraryContentDialog", "libraryContentDialogTitle", "libraryContentError", "libraryContentForm", "libraryContentId", "libraryContentTitle", "manageView", "newContentButton", "newFavoriteButton", "newRuleButton", "nextRangeButton", "previousRangeButton", "recurringView", "ruleCategory", "ruleCustomColor", "ruleDialog", "ruleDialogTitle", "ruleDuration", "ruleEndDate", "ruleError", "ruleForm", "ruleId", "ruleList", "ruleStart", "ruleStartDate", "ruleTitle", "selectedRange", "selectionCount", "selectionModeButton", "selectionToolbar", "shift15Button", "shift30Button", "snapSetting", "timeAxis", "timeline", "timelineDays", "timelineHeaders", "timelineScroll", "toast", "todayButton", "todayView", "topbar", "undoButton", "viewTitle", "weekStrip",
 ].map((id) => [id, document.querySelector(`#${id}`)]));
 
 function toDateKey(date) {
@@ -88,6 +102,25 @@ function toDateKey(date) {
 
 function cloneState(value = state) {
   return structuredClone(value);
+}
+
+function readStorageValue(key) {
+  try { return localStorage.getItem(key); }
+  catch { return null; }
+}
+
+function readStoredJson(key, fallback) {
+  try { return JSON.parse(localStorage.getItem(key) || "null") ?? fallback; }
+  catch { return fallback; }
+}
+
+function hasStoredState() {
+  return Boolean(readStorageValue(STORAGE_KEY) || readStorageValue(LEGACY_STORAGE_KEY));
+}
+
+function writeStorageValue(key, value) {
+  try { localStorage.setItem(key, value); return true; }
+  catch { return false; }
 }
 
 function loadState() {
@@ -105,11 +138,16 @@ function emptyState() {
   return migrateAppState({ rules: [], eventContents: [], recurrenceExceptions: [], blocksByDate: {}, settings: { viewDayCount: 1, snapMinutes: 15 } }, todayDateKey);
 }
 
-function saveState() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch {
+function saveState(markChanged = true) {
+  if (!writeStorageValue(STORAGE_KEY, JSON.stringify(state))) {
     showToast("浏览器未允许本地保存，本次修改仍然有效");
+    return;
+  }
+  hasLocalState = true;
+  if (markChanged) {
+    localUpdatedAt = new Date().toISOString();
+    writeStorageValue(LOCAL_UPDATED_AT_KEY, localUpdatedAt);
+    scheduleCloudSync();
   }
 }
 
@@ -170,6 +208,214 @@ function commitChange(previous, message, canUndo = true) {
   saveState();
   renderAll();
   showToast(message, canUndo ? previous : null);
+}
+
+function cloudErrorMessage(error) {
+  const message = error instanceof Error ? error.message : "云端服务暂时不可用";
+  if (/Invalid login credentials/i.test(message)) return "邮箱或密码不正确";
+  if (/Email not confirmed/i.test(message)) return "请先打开验证邮件确认邮箱";
+  if (/relation .*timeblock_states.* does not exist|timeblock_states.*schema cache|Could not find the table/i.test(message)) return "云端数据表尚未配置，请先执行 supabase/schema.sql";
+  if (/Failed to fetch|NetworkError/i.test(message)) return "无法连接云端，请检查网络后重试";
+  return message;
+}
+
+function syncMetaFor(userId) {
+  return syncMetadata[userId] || {};
+}
+
+function saveSyncMeta(userId, values) {
+  syncMetadata = { ...syncMetadata, [userId]: { ...syncMetaFor(userId), ...values } };
+  writeStorageValue(SYNC_METADATA_KEY, JSON.stringify(syncMetadata));
+}
+
+function renderCloudSync() {
+  if (!elements.cloudStatus) return;
+  const session = cloud.getSession();
+  elements.cloudStatus.textContent = cloudStatusText;
+  elements.cloudAuthForm.hidden = Boolean(session);
+  elements.cloudAccount.hidden = !session;
+  elements.cloudConflict.hidden = !session || !pendingCloudRecord;
+  elements.cloudAccountEmail.textContent = session?.user?.email || "";
+  elements.cloudSyncStatus.textContent = cloudSyncText;
+  for (const button of [elements.cloudSignInButton, elements.cloudSignUpButton, elements.cloudSyncButton, elements.cloudSignOutButton, elements.cloudUseLocalButton, elements.cloudUseRemoteButton]) {
+    button.disabled = cloudSyncBusy;
+  }
+  elements.cloudSyncButton.disabled = cloudSyncBusy || Boolean(pendingCloudRecord);
+}
+
+async function uploadLocalState() {
+  const session = cloud.getSession();
+  if (!session) return;
+  if (!localUpdatedAt) {
+    localUpdatedAt = new Date().toISOString();
+    writeStorageValue(LOCAL_UPDATED_AT_KEY, localUpdatedAt);
+  }
+  const uploadedLocalUpdatedAt = localUpdatedAt;
+  const uploadedState = createBackup(state).state;
+  const saved = await cloud.upsertState(uploadedState);
+  saveSyncMeta(session.user.id, { lastLocalUpdatedAt: uploadedLocalUpdatedAt, lastCloudUpdatedAt: saved.updated_at });
+  pendingCloudRecord = null;
+  cloudSyncText = `已同步 · ${new Date(saved.updated_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+}
+
+function applyCloudState(record) {
+  const session = cloud.getSession();
+  if (!session || !record) return;
+  const imported = parseBackup(JSON.stringify(record.state));
+  state = imported;
+  viewDayCount = state.settings.viewDayCount;
+  localUpdatedAt = record.updated_at;
+  writeStorageValue(STORAGE_KEY, JSON.stringify(state));
+  writeStorageValue(LOCAL_UPDATED_AT_KEY, localUpdatedAt);
+  hasLocalState = true;
+  saveSyncMeta(session.user.id, { lastLocalUpdatedAt: localUpdatedAt, lastCloudUpdatedAt: record.updated_at });
+  pendingCloudRecord = null;
+  cloudSyncText = `已采用云端数据 · ${new Date(record.updated_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+  renderAll();
+}
+
+async function syncCloud({ notify = false } = {}) {
+  const session = cloud.getSession();
+  if (!session || cloudSyncBusy || pendingCloudRecord) return;
+  if (!navigator.onLine) {
+    cloudSyncText = "离线，联网后自动同步";
+    renderCloudSync();
+    if (notify) showToast(cloudSyncText);
+    return;
+  }
+  cloudSyncBusy = true;
+  cloudSyncText = "正在同步…";
+  renderCloudSync();
+  try {
+    const remote = await cloud.fetchState();
+    const meta = syncMetaFor(session.user.id);
+    const localChanged = hasLocalState && (!meta.lastLocalUpdatedAt || localUpdatedAt !== meta.lastLocalUpdatedAt);
+    const remoteChanged = Boolean(remote) && (!meta.lastCloudUpdatedAt || remote.updated_at !== meta.lastCloudUpdatedAt);
+    const action = resolveSyncAction({ hasRemote: Boolean(remote), hasLocalState, localChanged, remoteChanged });
+    if (action === "conflict") {
+      pendingCloudRecord = remote;
+      cloudSyncText = "等待选择要保留的数据";
+      if (notify) showToast("本机和云端都有新修改，请选择保留版本");
+    } else if (action === "download") {
+      applyCloudState(remote);
+      if (notify) showToast("已从云端更新");
+    } else if (action === "upload") {
+      await uploadLocalState();
+      if (notify) showToast("已同步到云端");
+    } else {
+      cloudSyncText = remote ? "云端数据已是最新" : "云端暂无数据";
+    }
+    cloudStatusText = `已登录 · ${session.user.email}`;
+  } catch (error) {
+    cloudSyncText = cloudErrorMessage(error);
+    if (notify) showToast(cloudSyncText);
+  } finally {
+    cloudSyncBusy = false;
+    renderCloudSync();
+    const current = cloud.getSession();
+    if (current && !pendingCloudRecord && localUpdatedAt !== syncMetaFor(current.user.id).lastLocalUpdatedAt) scheduleCloudSync();
+  }
+}
+
+function scheduleCloudSync() {
+  if (!cloud.getSession() || pendingCloudRecord) return;
+  clearTimeout(cloudSyncTimer);
+  cloudSyncText = navigator.onLine ? "等待同步…" : "离线，联网后自动同步";
+  renderCloudSync();
+  cloudSyncTimer = setTimeout(() => syncCloud(), 900);
+}
+
+async function initializeCloud() {
+  cloudStatusText = "正在检查登录状态…";
+  renderCloudSync();
+  try {
+    const callbackSession = await cloud.completeAuthCallback(window.location.hash);
+    const session = callbackSession || await cloud.restoreSession();
+    if (callbackSession) {
+      history.replaceState(null, "", `${window.location.pathname}${window.location.search}#manage`);
+      switchView("manage");
+    }
+    cloudStatusText = session ? `已登录 · ${session.user.email}` : "本地数据无需登录即可使用";
+    if (session) await syncCloud();
+  } catch (error) {
+    cloudStatusText = "登录已过期，请重新登录";
+    cloudSyncText = cloudErrorMessage(error);
+  }
+  renderCloudSync();
+}
+
+async function signInToCloud(event) {
+  event.preventDefault();
+  if (!elements.cloudAuthForm.reportValidity()) return;
+  cloudSyncBusy = true;
+  cloudStatusText = "正在登录…";
+  renderCloudSync();
+  try {
+    const session = await cloud.signIn(elements.cloudEmail.value.trim(), elements.cloudPassword.value);
+    elements.cloudPassword.value = "";
+    cloudStatusText = `已登录 · ${session.user.email}`;
+    cloudSyncText = "准备首次同步…";
+    cloudSyncBusy = false;
+    await syncCloud({ notify: true });
+  } catch (error) {
+    cloudStatusText = cloudErrorMessage(error);
+  } finally {
+    cloudSyncBusy = false;
+    renderCloudSync();
+  }
+}
+
+async function signUpForCloud() {
+  if (!elements.cloudAuthForm.reportValidity()) return;
+  cloudSyncBusy = true;
+  cloudStatusText = "正在注册…";
+  renderCloudSync();
+  try {
+    const result = await cloud.signUp(elements.cloudEmail.value.trim(), elements.cloudPassword.value);
+    elements.cloudPassword.value = "";
+    if (result.session) {
+      cloudStatusText = `已登录 · ${result.session.user.email}`;
+      cloudSyncBusy = false;
+      await syncCloud({ notify: true });
+    } else {
+      cloudStatusText = "验证邮件已发送，请确认邮箱后再登录";
+    }
+  } catch (error) {
+    cloudStatusText = cloudErrorMessage(error);
+  } finally {
+    cloudSyncBusy = false;
+    renderCloudSync();
+  }
+}
+
+async function signOutOfCloud() {
+  clearTimeout(cloudSyncTimer);
+  cloudSyncBusy = true;
+  renderCloudSync();
+  try { await cloud.signOut(); }
+  catch (error) { showToast(cloudErrorMessage(error)); }
+  pendingCloudRecord = null;
+  cloudStatusText = "已退出；本地数据仍保留在此设备";
+  cloudSyncText = "";
+  cloudSyncBusy = false;
+  renderCloudSync();
+}
+
+async function resolveCloudConflict(useRemote) {
+  if (!pendingCloudRecord || cloudSyncBusy) return;
+  cloudSyncBusy = true;
+  renderCloudSync();
+  try {
+    if (useRemote) applyCloudState(pendingCloudRecord);
+    else await uploadLocalState();
+    showToast(useRemote ? "已采用云端数据" : "已用本机数据更新云端");
+  } catch (error) {
+    cloudSyncText = cloudErrorMessage(error);
+    showToast(cloudSyncText);
+  } finally {
+    cloudSyncBusy = false;
+    renderCloudSync();
+  }
 }
 
 function visibleDateKeys() {
@@ -344,6 +590,7 @@ function renderManagement() {
   elements.snapSetting.value = String(state.settings.snapMinutes);
   elements.accentCustomColor.value = resolveColor(state.settings.accentColor, "#486f65");
   elements.accentOptions.querySelectorAll("[data-accent-color]").forEach((button) => button.classList.toggle("active", button.dataset.accentColor === state.settings.accentColor));
+  renderCloudSync();
 }
 
 function usesPageTimelineScroll() {
@@ -1365,6 +1612,12 @@ elements.exportDataButton.addEventListener("click", exportData);
 elements.importDataButton.addEventListener("click", () => elements.importDataFile.click());
 elements.importDataFile.addEventListener("change", importData);
 elements.clearDataButton.addEventListener("click", clearAllData);
+elements.cloudAuthForm.addEventListener("submit", signInToCloud);
+elements.cloudSignUpButton.addEventListener("click", signUpForCloud);
+elements.cloudSyncButton.addEventListener("click", () => syncCloud({ notify: true }));
+elements.cloudSignOutButton.addEventListener("click", signOutOfCloud);
+elements.cloudUseRemoteButton.addEventListener("click", () => resolveCloudConflict(true));
+elements.cloudUseLocalButton.addEventListener("click", () => resolveCloudConflict(false));
 elements.defaultViewSetting.addEventListener("change", () => changeViewDayCount(Number(elements.defaultViewSetting.value)));
 elements.snapSetting.addEventListener("change", () => { state.settings.snapMinutes = Number(elements.snapSetting.value); saveState(); showToast(`已改为 ${state.settings.snapMinutes} 分钟吸附`); });
 elements.accentOptions.addEventListener("click", (event) => {
@@ -1411,9 +1664,14 @@ window.addEventListener("resize", () => {
   if (lastHourGridMode !== usesHourGrid()) renderAll();
 });
 window.addEventListener("hashchange", () => switchView(window.location.hash.slice(1)));
+window.addEventListener("focus", () => syncCloud());
+window.addEventListener("online", () => { cloudSyncText = "已联网，正在同步…"; renderCloudSync(); syncCloud(); });
+window.addEventListener("offline", () => { cloudSyncText = "离线，联网后自动同步"; renderCloudSync(); });
+document.addEventListener("visibilitychange", () => { if (!document.hidden) syncCloud(); });
 
 renderAll();
 goToToday();
+initializeCloud();
 const initialView = window.location.hash.slice(1);
 if (["recurring", "manage", "data"].includes(initialView)) switchView(initialView);
 setInterval(() => {
@@ -1422,4 +1680,5 @@ setInterval(() => {
   now = freshNow;
   const nowLine = elements.timelineDays.querySelector(`[data-date="${todayDateKey}"] .now-line`);
   if (nowLine) nowLine.style.top = `${(now.getHours() * 60 + now.getMinutes()) * PIXELS_PER_MINUTE}px`;
+  syncCloud();
 }, 60_000);

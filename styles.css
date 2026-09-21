@@ -183,6 +183,15 @@ svg { width: 1.25rem; height: 1.25rem; fill: none; stroke: currentColor; stroke-
 .archived-actions .icon-button { min-height: 40px; padding: 0; }
 .compact-empty { padding-block: 20px; }
 .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.cloud-auth-form { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; align-items: end; gap: 12px; }
+.cloud-auth-actions, .cloud-account-actions, .cloud-conflict > div { display: flex; gap: 8px; }
+.cloud-account { min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.cloud-account[hidden] { display: none; }
+.cloud-account > div:first-child { min-width: 0; display: grid; gap: 3px; }
+.cloud-account strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cloud-account span { color: var(--muted); font-size: .8125rem; }
+.cloud-conflict { margin-top: 12px; padding: 13px; border: 1px solid #dcc7a5; border-radius: 10px; background: #fffaf0; }
+.cloud-conflict p { margin: 0 0 10px; font-size: .875rem; }
 .data-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .data-actions .danger-button { margin-left: auto; }
 
@@ -348,6 +357,10 @@ html.touch-selecting-page body { position: fixed; right: 0; left: 0; width: 100%
   .manage-section { padding: 16px 13px; }
   .manage-heading { align-items: flex-start; }
   .settings-grid { grid-template-columns: 1fr; }
+  .cloud-auth-form { grid-template-columns: 1fr; }
+  .cloud-auth-actions, .cloud-account-actions { width: 100%; }
+  .cloud-auth-actions > button, .cloud-account-actions > button { flex: 1; }
+  .cloud-account { align-items: stretch; flex-direction: column; }
   .data-actions { display: grid; }
   .data-actions .danger-button { margin: 6px 0 0; }
   .content-library-item { grid-template-columns: 9px minmax(0, 1fr) auto; }

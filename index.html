@@ -111,6 +111,23 @@
             </div>
           </section>
 
+          <section class="manage-section" aria-labelledby="cloudTitle">
+            <div class="manage-heading"><div><h3 id="cloudTitle">云端同步</h3><p id="cloudStatus" role="status">本地数据无需登录即可使用</p></div></div>
+            <form class="cloud-auth-form" id="cloudAuthForm">
+              <label class="field"><span>邮箱</span><input id="cloudEmail" type="email" autocomplete="email" required /></label>
+              <label class="field"><span>密码</span><input id="cloudPassword" type="password" autocomplete="current-password" minlength="6" required /></label>
+              <div class="cloud-auth-actions"><button type="button" class="secondary-button" id="cloudSignUpButton">注册</button><button type="submit" class="primary-button" id="cloudSignInButton">登录</button></div>
+            </form>
+            <div class="cloud-account" id="cloudAccount" hidden>
+              <div><strong id="cloudAccountEmail"></strong><span id="cloudSyncStatus"></span></div>
+              <div class="cloud-account-actions"><button type="button" class="secondary-button" id="cloudSyncButton">立即同步</button><button type="button" class="secondary-button" id="cloudSignOutButton">退出</button></div>
+            </div>
+            <div class="cloud-conflict" id="cloudConflict" hidden>
+              <p>本机和云端都有新修改，请选择保留哪一份完整数据。</p>
+              <div><button type="button" class="secondary-button" id="cloudUseRemoteButton">使用云端</button><button type="button" class="primary-button" id="cloudUseLocalButton">保留本机</button></div>
+            </div>
+          </section>
+
           <section class="manage-section" aria-labelledby="dataTitle">
             <div class="manage-heading"><div><h3 id="dataTitle">本地数据</h3><p id="dataSummary"></p></div></div>
             <div class="data-actions">
