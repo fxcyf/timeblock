@@ -89,8 +89,9 @@ export function createSupabaseCloud({ projectUrl, publishableKey, fetchImpl = fe
       return activeSession();
     },
 
-    async signUp(email, password) {
-      const payload = await request("/auth/v1/signup", { method: "POST", body: { email, password } });
+    async signUp(email, password, redirectTo = null) {
+      const query = redirectTo ? `?${new URLSearchParams({ redirect_to: redirectTo })}` : "";
+      const payload = await request(`/auth/v1/signup${query}`, { method: "POST", body: { email, password } });
       const next = sessionFromPayload(payload);
       if (next) persistSession(next);
       return { ...payload, session: next };

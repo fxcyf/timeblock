@@ -41,6 +41,22 @@ test("authenticates with the publishable key and persists a refreshable session"
   assert.equal(JSON.parse(stored.get("timeblock-supabase-session")).refresh_token, "refresh");
 });
 
+test("sends signup confirmation back to the deployed app path", async () => {
+  let requestedUrl = "";
+  const cloud = createSupabaseCloud({
+    projectUrl: "https://example.supabase.co",
+    publishableKey: "sb_publishable_test",
+    storage: { getItem: () => null, setItem: () => {}, removeItem: () => {} },
+    fetchImpl: async (url) => {
+      requestedUrl = url;
+      return response({ user: { id: "user-1", email: "me@example.com" } });
+    },
+  });
+
+  await cloud.signUp("me@example.com", "password123", "https://fxcyf.github.io/timeblock/");
+  assert.equal(requestedUrl, "https://example.supabase.co/auth/v1/signup?redirect_to=https%3A%2F%2Ffxcyf.github.io%2Ftimeblock%2F");
+});
+
 test("reads and upserts only the authenticated user's cloud state", async () => {
   const calls = [];
   const stored = new Map([["timeblock-supabase-session", JSON.stringify({ access_token: "access", refresh_token: "refresh", expires_at: 9_999_999, user: { id: "user-1", email: "me@example.com" } })]]);

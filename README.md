@@ -50,6 +50,8 @@ npm start
 2. 在 Authentication → URL Configuration 将 Site URL 设为 `https://fxcyf.github.io/timeblock/`，并把该地址及本地开发地址 `http://localhost:4173/` 加入 Redirect URLs。
 3. 确认 Email 登录已启用。若开启邮箱确认，新用户需先点击验证邮件再登录。
 
+注册请求会把当前应用路径显式传给 Supabase，验证邮件确认后会回到 `/timeblock/`，不依赖项目的默认根地址。
+
 Publishable key 出现在浏览器和仓库中是正常的；不要把 `sb_secret_...`、`service_role` 或数据库密码写入前端。数据访问由登录令牌和 `supabase/schema.sql` 中的 RLS 共同限制。
 
 ## 测试

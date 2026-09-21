@@ -371,7 +371,8 @@ async function signUpForCloud() {
   cloudStatusText = "正在注册…";
   renderCloudSync();
   try {
-    const result = await cloud.signUp(elements.cloudEmail.value.trim(), elements.cloudPassword.value);
+    const redirectTo = new URL(".", window.location.href).href;
+    const result = await cloud.signUp(elements.cloudEmail.value.trim(), elements.cloudPassword.value, redirectTo);
     elements.cloudPassword.value = "";
     if (result.session) {
       cloudStatusText = `已登录 · ${result.session.user.email}`;
