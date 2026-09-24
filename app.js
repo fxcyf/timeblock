@@ -27,7 +27,7 @@ import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./src/cloud-config.js";
 import { migrateAppState } from "./src/state.js";
 import { validateRuleDraft } from "./src/forms.js";
 import { gridCellAtPoint, gridSelectionRange, splitBlockIntoHourSegments } from "./src/grid.js";
-import { planGroupTransform, targetForGroupDrag } from "./src/group.js";
+import { planGroupTransform, selectedDuration, targetForGroupDrag } from "./src/group.js";
 import { COLOR_PRESETS, colorTokens, normalizeColorValue, resolveColor } from "./src/theme.js";
 import {
   materializeRecurringForDate,
@@ -1278,11 +1278,14 @@ function selectedItems() {
 }
 
 function renderSelectionToolbar() {
+  const items = selectedItems();
   elements.selectionToolbar.hidden = !selectionMode;
   elements.selectionModeButton.classList.toggle("active", selectionMode);
   elements.selectionModeButton.textContent = selectionMode ? "完成" : "选择";
-  elements.selectionCount.textContent = `已选 ${selectedBlockKeys.size} 项`;
-  elements.selectionToolbar.querySelectorAll("button:not(#cancelSelectionButton)").forEach((button) => { button.disabled = selectedBlockKeys.size === 0; });
+  elements.selectionCount.textContent = items.length
+    ? `已选 ${items.length} 项 · 总时长 ${formatDuration(selectedDuration(items))}`
+    : "已选 0 项";
+  elements.selectionToolbar.querySelectorAll("button:not(#cancelSelectionButton)").forEach((button) => { button.disabled = items.length === 0; });
 }
 
 function enterSelectionMode(dateKey = null, id = null) {

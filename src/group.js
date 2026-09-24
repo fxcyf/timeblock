@@ -17,6 +17,10 @@ function detachedCopy(block, id) {
   return copy;
 }
 
+export function selectedDuration(items) {
+  return items.reduce((total, item) => total + item.block.end - item.block.start, 0);
+}
+
 export function targetForGroupDrag({ items, draggedDate, draggedBlockId, pointerDate, pointerMinute, grabOffset = 0, snapMinutes = 15 }) {
   if (!Array.isArray(items) || !items.length || !dateFromKey(pointerDate) || !Number.isFinite(pointerMinute) || !Number.isFinite(grabOffset)) return null;
   const ordered = [...items].sort((left, right) => left.date.localeCompare(right.date) || left.block.start - right.block.start || left.block.end - right.block.end);

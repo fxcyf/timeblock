@@ -1,13 +1,18 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { planGroupTransform, targetForGroupDrag } from "../src/group.js";
+import { planGroupTransform, selectedDuration, targetForGroupDrag } from "../src/group.js";
 
 const selected = [
   { date: "2026-08-30", block: { id: "a", title: "A", start: 540, end: 600, color: "sage", done: true } },
   { date: "2026-08-30", block: { id: "b", title: "B", start: 600, end: 630, color: "blue", done: false } },
   { date: "2026-08-31", block: { id: "r", title: "R", start: 570, end: 600, color: "lilac", recurring: true, sourceRuleId: "rule", recurrenceDate: "2026-08-31" } },
 ];
+
+test("adds the full duration of every selected block", () => {
+  assert.equal(selectedDuration(selected), 120);
+  assert.equal(selectedDuration([]), 0);
+});
 
 test("moves a cross-date group atomically while allowing selected positions to be reused", () => {
   const plan = planGroupTransform({
