@@ -2,6 +2,7 @@ import {
   findNextFreeSlot,
   formatDuration,
   formatTime,
+  formatTimeRange,
   hasConflict,
   parseTime,
   selectionRange,
@@ -1085,13 +1086,22 @@ function rangeFromPointers(anchor, current) {
 
 function renderDraftSelection(dateKey, range) {
   const conflict = hasConflict(range, blocksForDate(dateKey));
+  const rangeLabel = formatTimeRange(range.start, range.end);
   activeSelection = { date: dateKey, ...range };
   if (usesHourGrid()) {
-    elements.timelineDays.querySelectorAll(`[data-date="${dateKey}"] .quarter-cell`).forEach((cell) => {
+    const cells = [...elements.timelineDays.querySelectorAll(`[data-date="${dateKey}"] .quarter-cell`)];
+    cells.forEach((cell) => {
       const minute = Number(cell.dataset.minute);
+      delete cell.dataset.selectionLabel;
+      delete cell.dataset.selectionAlign;
       cell.classList.toggle("in-selection", minute >= range.start && minute < range.end);
       cell.classList.toggle("invalid", conflict && minute >= range.start && minute < range.end);
     });
+    const labelCell = cells.find((cell) => Number(cell.dataset.minute) >= range.start && Number(cell.dataset.minute) < range.end);
+    if (labelCell) {
+      labelCell.dataset.selectionLabel = rangeLabel;
+      labelCell.dataset.selectionAlign = Number(labelCell.dataset.minute) % 60 >= 30 ? "end" : "start";
+    }
     return conflict;
   }
   const selection = elements.timelineDays.querySelector(`[data-date="${dateKey}"] .draft-selection`);
@@ -1100,7 +1110,7 @@ function renderDraftSelection(dateKey, range) {
   selection.style.top = `${range.start * PIXELS_PER_MINUTE}px`;
   selection.style.height = `${(range.end - range.start) * PIXELS_PER_MINUTE}px`;
   selection.classList.toggle("invalid", conflict);
-  selection.querySelector(".selection-time").textContent = `${displayScheduleTime(range.start)} — ${displayScheduleTime(range.end)}`;
+  selection.querySelector(".selection-time").textContent = rangeLabel;
   return conflict;
 }
 
@@ -1132,7 +1142,7 @@ function showActionPicker(point) {
   if (!activeSelection) return;
   selectionPoint = point;
   const parts = dateParts(activeSelection.date);
-  elements.selectedRange.textContent = `${viewDayCount === 1 ? "" : `${parts.month}/${parts.day} · `}${displayScheduleTime(activeSelection.start)} — ${displayScheduleTime(activeSelection.end)}`;
+  elements.selectedRange.textContent = `${viewDayCount === 1 ? "" : `${parts.month}/${parts.day} · `}${formatTimeRange(activeSelection.start, activeSelection.end)}`;
   renderEventContents();
   showContentList();
   elements.actionPicker.hidden = false;

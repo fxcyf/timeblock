@@ -299,10 +299,13 @@ html.touch-selecting-page body { position: fixed; right: 0; left: 0; width: 100%
   .hour-row { position: relative; height: 68px; display: grid; grid-template-columns: 56px minmax(0, 1fr); border-bottom: 1px solid var(--line); }
   .hour-label { grid-column: 1; display: flex; align-items: flex-start; justify-content: flex-end; padding: 5px 9px 0 0; color: var(--muted); font-size: .76rem; font-variant-numeric: tabular-nums; }
   .quarter-grid { grid-column: 2; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-left: 1px solid var(--line); }
-  .quarter-cell { min-width: 0; border-right: 1px dashed color-mix(in srgb, var(--line) 78%, transparent); background: transparent; transition: background .12s; }
+  .quarter-cell { position: relative; min-width: 0; border-right: 1px dashed color-mix(in srgb, var(--line) 78%, transparent); background: transparent; transition: background .12s; }
   .quarter-cell:last-child { border-right: 0; }
   .quarter-cell.in-selection { background: color-mix(in srgb, var(--accent-soft) 86%, transparent); box-shadow: inset 0 0 0 2px var(--accent); }
   .quarter-cell.invalid { background: #f7d9d6; box-shadow: inset 0 0 0 2px var(--danger); }
+  .quarter-cell.in-selection[data-selection-label]::after { position: absolute; z-index: 8; top: 50%; left: 5px; width: max-content; max-width: calc(100vw - 90px); padding: 5px 8px; border: 1px solid var(--accent); border-radius: 7px; color: var(--accent-dark); background: var(--surface); box-shadow: 0 4px 12px rgba(30,35,30,.12); content: attr(data-selection-label); font-size: .75rem; font-weight: 700; white-space: nowrap; transform: translateY(-50%); pointer-events: none; }
+  .quarter-cell.in-selection[data-selection-label][data-selection-align="end"]::after { right: 5px; left: auto; }
+  .quarter-cell.invalid[data-selection-label]::after { border-color: var(--danger); color: var(--danger); }
   .hour-events { position: absolute; z-index: 5; top: 0; right: 0; bottom: 0; left: 56px; pointer-events: none; }
   .time-block.hour-segment { top: 4px; right: auto; bottom: 4px; height: auto; min-width: 0; padding: 7px 8px 6px; border-radius: 0; cursor: pointer; pointer-events: auto; }
   .time-block.hour-segment.segment-first { border-radius: 9px 0 0 9px; }

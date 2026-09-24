@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   findNextFreeSlot,
   formatDuration,
+  formatTimeRange,
   hasConflict,
   parseTime,
   selectionRange,
@@ -33,6 +34,11 @@ test("finds the first free slot after existing blocks", () => {
 test("formats readable durations", () => {
   assert.equal(formatDuration(35), "35 分钟");
   assert.equal(formatDuration(90), "1 小时 30 分钟");
+});
+
+test("formats a selected time range with its duration", () => {
+  assert.equal(formatTimeRange(9 * 60, 10 * 60 + 30), "09:00 — 10:30 · 1 小时 30 分钟");
+  assert.equal(formatTimeRange(23 * 60 + 45, 24 * 60), "23:45 — 24:00 · 15 分钟");
 });
 
 test("snaps a dragged timeline selection outward to 15-minute steps", () => {

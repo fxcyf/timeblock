@@ -21,6 +21,11 @@ export function formatDuration(minutes) {
   return remainder ? `${hours} 小时 ${remainder} 分钟` : `${hours} 小时`;
 }
 
+export function formatTimeRange(start, end) {
+  const displayTime = (minutes) => minutes === 24 * 60 ? "24:00" : formatTime(minutes);
+  return `${displayTime(start)} — ${displayTime(end)} · ${formatDuration(end - start)}`;
+}
+
 export function sortBlocks(blocks) {
   return [...blocks].sort((left, right) => left.start - right.start || left.end - right.end);
 }
