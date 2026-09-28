@@ -51,6 +51,11 @@ const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
 const DAY_NAMES = ["日", "一", "二", "三", "四", "五", "六"];
 const FULL_DAY_NAMES = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
 const COLORS = Object.keys(COLOR_PRESETS);
+const CUSTOM_COLOR_CHOICES = Object.freeze([
+  ["#c44f4f", "砖红"], ["#c9644c", "珊瑚"], ["#c67b43", "橙色"], ["#af8a3f", "琥珀"], ["#8d8f45", "橄榄"], ["#62905b", "草绿"],
+  ["#3f8a68", "翠绿"], ["#3e8b7f", "海绿"], ["#3d8494", "湖蓝"], ["#4f7fa8", "天蓝"], ["#5a6fa8", "靛蓝"], ["#755fa5", "紫罗兰"],
+  ["#8d5da2", "葡萄紫"], ["#a75f91", "洋红"], ["#ad6175", "莓红"], ["#9a6758", "陶土"], ["#806b58", "胡桃"], ["#6a706d", "石墨"],
+].map(([value, label]) => Object.freeze({ value, label })));
 
 const defaultRules = [
   { id: "dinner", title: "晚餐 & 放空", category: "用餐", start: 19 * 60, duration: 45, days: [0, 1, 2, 3, 4, 5, 6], startDate: "2000-01-01", endDate: null, color: "apricot", enabled: true, inactiveRanges: [] },
@@ -171,11 +176,63 @@ function setColorChoice(form, name, customInput, color, fallback = "apricot") {
   const radio = form.querySelector(`[name="${name}"][value="${preset ? normalized : "custom"}"]`);
   if (radio) radio.checked = true;
   if (!preset && customInput) customInput.value = resolveColor(normalized, fallback);
+  syncCustomColorControl(name, customInput?.value || resolveColor(normalized, fallback), !preset);
 }
 
 function readColorChoice(form, name, customInput, fallback = "apricot") {
   const value = form.querySelector(`[name="${name}"]:checked`)?.value;
   return value === "custom" ? safeColor(customInput?.value, fallback) : safeColor(value, fallback);
+}
+
+function syncCustomColorControl(name, value, selected = false) {
+  const control = document.querySelector(`[data-custom-color-control="${name}"]`);
+  if (!control) return;
+  const color = resolveColor(value, name === "accentColor" ? "#486f65" : "apricot");
+  control.style.setProperty("--selected-custom-color", color);
+  control.classList.toggle("selected", selected);
+  control.querySelectorAll("[data-grid-color]").forEach((button) => {
+    const active = selected && button.dataset.gridColor === color;
+    button.classList.toggle("selected", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+}
+
+function initializeCustomColorGrids() {
+  const buttons = CUSTOM_COLOR_CHOICES.map(({ value, label }) => `<button type="button" class="grid-color-button" data-grid-color="${value}" style="--grid-color:${value}" aria-label="${label}" title="${label}" aria-pressed="false"></button>`).join("");
+  document.querySelectorAll("[data-custom-color-grid]").forEach((grid) => { grid.innerHTML = buttons; });
+  for (const [input, name] of [[elements.contentCustomColor, "contentColor"], [elements.blockCustomColor, "blockColor"], [elements.ruleCustomColor, "ruleColor"], [elements.libraryContentCustomColor, "libraryContentColor"], [elements.accentCustomColor, "accentColor"]]) {
+    syncCustomColorControl(name, input.value);
+  }
+}
+
+function toggleCustomColorGrid(toggle) {
+  const grid = document.querySelector(`#${toggle.getAttribute("aria-controls")}`);
+  if (!grid) return;
+  const expand = grid.hidden;
+  grid.hidden = !expand;
+  toggle.setAttribute("aria-expanded", String(expand));
+  if (expand) grid.querySelector("button")?.focus({ preventScroll: true });
+  positionActionPicker();
+}
+
+function chooseGridColor(button) {
+  const control = button.closest("[data-custom-color-control]");
+  const name = control?.dataset.customColorControl;
+  const input = control?.querySelector('input[type="hidden"]');
+  if (!name || !input) return;
+  const color = safeColor(button.dataset.gridColor, "apricot");
+  input.value = color;
+  if (name === "accentColor") {
+    state.settings.accentColor = color;
+    saveState();
+    renderAll();
+    showToast("界面强调色已更新");
+    return;
+  }
+  const radio = control.querySelector(`[name="${name}"][value="custom"]`);
+  if (radio) radio.checked = true;
+  syncCustomColorControl(name, color, true);
+  positionActionPicker();
 }
 
 function newCategoryIsSelected(select) {
@@ -651,8 +708,11 @@ function renderManagement() {
   elements.dataSummary.textContent = `${manualCount} 个手动时间块 · ${state.rules.length} 条重复规则 · ${favoriteEventContents(state.eventContents).length} 个常用内容`;
   elements.defaultViewSetting.value = String(state.settings.viewDayCount);
   elements.snapSetting.value = String(state.settings.snapMinutes);
-  elements.accentCustomColor.value = resolveColor(state.settings.accentColor, "#486f65");
-  elements.accentOptions.querySelectorAll("[data-accent-color]").forEach((button) => button.classList.toggle("active", button.dataset.accentColor === state.settings.accentColor));
+  const accent = resolveColor(state.settings.accentColor, "#486f65");
+  const accentPresets = [...elements.accentOptions.querySelectorAll("[data-accent-color]")];
+  elements.accentCustomColor.value = accent;
+  accentPresets.forEach((button) => button.classList.toggle("active", button.dataset.accentColor === accent));
+  syncCustomColorControl("accentColor", accent, !accentPresets.some((button) => button.dataset.accentColor === accent));
   renderCloudSync();
 }
 
@@ -1180,6 +1240,7 @@ function openContentForm() {
   elements.contentForm.reset();
   elements.contentError.textContent = "";
   setCategoryChoice(elements.contentCategory, elements.contentNewCategoryField, elements.contentNewCategory, "");
+  syncCustomColorControl("contentColor", elements.contentCustomColor.value, false);
   elements.contentListView.hidden = true;
   elements.contentForm.hidden = false;
   positionActionPicker();
@@ -1639,6 +1700,10 @@ function startPointerAdjustment(event) {
 }
 
 document.addEventListener("click", (event) => {
+  const colorGridToggle = event.target.closest("[data-color-grid-toggle]");
+  if (colorGridToggle) { toggleCustomColorGrid(colorGridToggle); return; }
+  const gridColor = event.target.closest("[data-grid-color]");
+  if (gridColor) { chooseGridColor(gridColor); return; }
   const content = event.target.closest("[data-event-content-id]");
   if (content) { const item = state.eventContents.find((entry) => entry.id === content.dataset.eventContentId); if (item) createBlockFromContent(item); return; }
   const editContent = event.target.closest("[data-edit-event-content]");
@@ -1713,13 +1778,11 @@ elements.accentOptions.addEventListener("click", (event) => {
   state.settings.accentColor = safeColor(button.dataset.accentColor, "#486f65");
   saveState(); renderAll(); showToast("界面强调色已更新");
 });
-elements.accentCustomColor.addEventListener("input", () => {
-  state.settings.accentColor = safeColor(elements.accentCustomColor.value, "#486f65");
-  applyTheme();
-});
-elements.accentCustomColor.addEventListener("change", () => { saveState(); renderAll(); showToast("自定义界面强调色已保存"); });
 for (const [input, name, form] of [[elements.contentCustomColor, "contentColor", elements.contentForm], [elements.blockCustomColor, "blockColor", elements.blockForm], [elements.ruleCustomColor, "ruleColor", elements.ruleForm], [elements.libraryContentCustomColor, "libraryContentColor", elements.libraryContentForm]]) {
-  input.addEventListener("input", () => { const radio = form.querySelector(`[name="${name}"][value="custom"]`); if (radio) radio.checked = true; });
+  form.addEventListener("change", (event) => {
+    if (!event.target.matches(`[name="${name}"]`)) return;
+    syncCustomColorControl(name, input.value, event.target.value === "custom");
+  });
 }
 elements.selectionModeButton.addEventListener("click", () => { if (selectionMode) exitSelectionMode(); else enterSelectionMode(); });
 elements.cancelSelectionButton.addEventListener("click", () => exitSelectionMode());
@@ -1756,6 +1819,7 @@ window.addEventListener("online", () => { cloudSyncText = "已联网，正在同
 window.addEventListener("offline", () => { cloudSyncText = "离线，联网后自动同步"; renderCloudSync(); });
 document.addEventListener("visibilitychange", () => { if (!document.hidden) syncCloud(); });
 
+initializeCustomColorGrids();
 renderAll();
 goToToday();
 initializeCloud();

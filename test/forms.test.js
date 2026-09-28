@@ -31,13 +31,20 @@ test("time-block dialog close and cancel controls are also non-submitting", () =
   }
 });
 
-test("new event content supports automatic, preset, and custom colors", () => {
+test("color customization uses labeled grids instead of native sliders", () => {
   assert.match(html, /name="contentColor" value="auto"[^>]*checked/);
   assert.match(html, /name="contentColor" value="apricot"/);
-  assert.match(html, /id="contentCustomColor" type="color"/);
+  assert.match(html, /id="contentCustomColor" type="hidden"/);
+  assert.match(html, /data-color-grid-toggle="contentColor"/);
+  assert.match(html, /data-custom-color-grid="libraryContentColor"/);
+  assert.match(html, /data-color-grid-toggle="accentColor"/);
+  assert.doesNotMatch(html, /type="color"/);
   assert.match(app, /selectedContentColor === "auto"/);
   assert.match(app, /readColorChoice\(elements\.contentForm, "contentColor", elements\.contentCustomColor\)/);
-  assert.match(css, /\.custom-color-option > input\[type="color"\] \{[^}]*position: static;[^}]*opacity: 1;/);
+  assert.match(app, /CUSTOM_COLOR_CHOICES/);
+  assert.match(css, /\.custom-color-grid \{[^}]*display: grid;[^}]*grid-template-columns: repeat\(6, 38px\);/);
+  assert.match(css, /@media \(max-width: 360px\) \{\s*\.custom-color-grid \{ grid-template-columns: repeat\(5, 38px\);/);
+  assert.match(css, /\.color-options \{[^}]*flex-wrap: wrap;/);
 });
 
 test("new event content offers existing categories and a new-category choice", () => {
