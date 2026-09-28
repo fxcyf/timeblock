@@ -50,17 +50,21 @@ test("builds readable theme tokens for light and dark accents", () => {
 test("derives a consistent and readable role set for every event color", () => {
   for (const color of [...Object.values(COLOR_PRESETS), "#ffffff", "#050505", "#ffea00", "#00ff00", "#00ffff", "#ff00ff"]) {
     const tokens = eventColorTokens(color);
-    assert.ok(contrastRatio(tokens.text, tokens.surface) >= 7);
+    assert.ok(contrastRatio(tokens.text, tokens.surface) >= 4.5);
     assert.match(tokens.surface, /^#[0-9a-f]{6}$/);
     assert.match(tokens.border, /^#[0-9a-f]{6}$/);
   }
 });
 
-test("uses each pastel as its actual event surface and marker", () => {
+test("uses each pastel as its actual surface with a distinct hue-aware text color", () => {
+  const textColors = new Set();
   for (const [name, color] of Object.entries(COLOR_PRESETS)) {
     const tokens = eventColorTokens(name);
     assert.equal(tokens.surface, color);
     assert.equal(tokens.marker, color);
-    assert.equal(tokens.text, STATIC_THEME_TOKENS.text);
+    assert.notEqual(tokens.text, STATIC_THEME_TOKENS.text);
+    assert.ok(contrastRatio(tokens.text, tokens.surface) >= 4.5);
+    textColors.add(tokens.text);
   }
+  assert.equal(textColors.size, Object.keys(COLOR_PRESETS).length);
 });

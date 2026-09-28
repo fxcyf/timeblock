@@ -191,7 +191,7 @@ function colorStyle(item) {
 
 function swatchStyle(item, prefix) {
   const tokens = eventColorTokens(linkedContentColor(item, state.eventContents));
-  return `--${prefix}-surface:${tokens.surface};--${prefix}-border:${tokens.border};--${prefix}-text:${tokens.text}`;
+  return `--${prefix}-surface:${tokens.surface};--${prefix}-border:${tokens.border}`;
 }
 
 function linkedContent(item) {
@@ -246,10 +246,9 @@ function syncCustomColorControl(name, value, selected = false) {
   if (!control) return;
   const isAccent = name === "accentColor";
   const color = resolveColor(value, isAccent ? DEFAULT_ACCENT_COLOR : DEFAULT_CONTENT_COLOR);
-  const tokens = isAccent ? { surface: accentColorTokens(color).accent, border: accentColorTokens(color).strong, text: accentColorTokens(color).onAccent } : eventColorTokens(color);
+  const tokens = isAccent ? { surface: accentColorTokens(color).accent, border: accentColorTokens(color).strong } : eventColorTokens(color);
   control.style.setProperty("--selected-custom-color", tokens.surface);
   control.style.setProperty("--selected-custom-border", tokens.border);
-  control.style.setProperty("--selected-custom-text", tokens.text);
   control.classList.toggle("selected", selected);
   control.querySelectorAll("[data-grid-color]").forEach((button) => {
     const active = selected && button.dataset.gridColor === color;
@@ -261,13 +260,13 @@ function syncCustomColorControl(name, value, selected = false) {
 function initializeCustomColorGrids() {
   elements.accentOptions.innerHTML = ACCENT_COLOR_PRESETS.map(({ value, label }) => {
     const tokens = accentColorTokens(value);
-    return `<button type="button" data-accent-color="${value}" style="--swatch:${tokens.accent};--swatch-border:${tokens.strong};--swatch-text:${tokens.onAccent}" aria-label="${label}" title="${label}">Aa</button>`;
+    return `<button type="button" data-accent-color="${value}" style="--swatch:${tokens.accent};--swatch-border:${tokens.strong}" aria-label="${label}" title="${label}"></button>`;
   }).join("");
   document.querySelectorAll("[data-custom-color-grid]").forEach((grid) => {
     const isAccent = grid.dataset.customColorGrid === "accentColor";
     grid.innerHTML = CUSTOM_COLOR_CHOICES.map(({ value, label }) => {
-      const tokens = isAccent ? { surface: accentColorTokens(value).accent, border: accentColorTokens(value).strong, text: accentColorTokens(value).onAccent } : eventColorTokens(value);
-      return `<button type="button" class="grid-color-button" data-grid-color="${value}" style="--grid-surface:${tokens.surface};--grid-border:${tokens.border};--grid-text:${tokens.text}" aria-label="${label}" title="${label}" aria-pressed="false">Aa</button>`;
+      const tokens = isAccent ? { surface: accentColorTokens(value).accent, border: accentColorTokens(value).strong } : eventColorTokens(value);
+      return `<button type="button" class="grid-color-button" data-grid-color="${value}" style="--grid-surface:${tokens.surface};--grid-border:${tokens.border}" aria-label="${label}" title="${label}" aria-pressed="false"></button>`;
     }).join("");
   });
   elements.contentCustomColor.value = resolveColor(DEFAULT_CONTENT_COLOR);
@@ -761,9 +760,9 @@ function renderEventContents() {
   populateCategorySelect(elements.libraryContentCategory, categories);
   syncNewCategoryField(elements.contentCategory, elements.contentNewCategoryField, elements.contentNewCategory);
   syncNewCategoryField(elements.libraryContentCategory, elements.libraryContentNewCategoryField, elements.libraryContentNewCategory);
-  elements.actionOptions.innerHTML = favorites.length ? favorites.map((content) => `<button type="button" data-event-content-id="${escapeHtml(content.id)}" style="${swatchStyle(content, "action")}"><span class="action-dot">Aa</span><span class="action-copy"><strong>${escapeHtml(content.title)}</strong>${content.category ? `<small>${escapeHtml(content.category)}</small>` : ""}</span><svg><use href="#icon-arrow"></use></svg></button>`).join("") : '<p class="empty-content">还没有常用内容</p>';
-  elements.eventContentLibrary.innerHTML = favorites.length ? favorites.map((content, index) => `<div class="content-library-item"><button type="button" class="content-library-open" data-edit-event-content="${escapeHtml(content.id)}" aria-label="编辑${escapeHtml(content.title)}"><i style="${swatchStyle(content, "content")}" aria-hidden="true">Aa</i><span class="content-library-copy"><strong>${escapeHtml(content.title)}</strong><small>${escapeHtml(content.category || "未分类")}</small></span></button><span class="order-actions"><button type="button" data-move-content="${escapeHtml(content.id)}" data-direction="-1" aria-label="上移${escapeHtml(content.title)}" ${index === 0 ? "disabled" : ""}><svg><use href="#icon-up"></use></svg></button><button type="button" data-move-content="${escapeHtml(content.id)}" data-direction="1" aria-label="下移${escapeHtml(content.title)}" ${index === favorites.length - 1 ? "disabled" : ""}><svg><use href="#icon-down"></use></svg></button></span><button type="button" class="edit-content-button" data-edit-event-content="${escapeHtml(content.id)}" aria-label="编辑${escapeHtml(content.title)}"><svg><use href="#icon-chevron"></use></svg></button></div>`).join("") : '<p class="empty-state">还没有常用内容。添加后，划选时间时就能直接使用。</p>';
-  elements.archivedEventContentLibrary.innerHTML = archived.length ? archived.map((content) => `<div class="content-library-item archived-item"><i style="${swatchStyle(content, "content")}" aria-hidden="true">Aa</i><span class="content-library-copy"><strong>${escapeHtml(content.title)}</strong><small>${escapeHtml(content.category || "未分类")}</small></span><span class="archived-actions"><button type="button" class="secondary-button" data-restore-content="${escapeHtml(content.id)}">恢复</button><button type="button" class="danger-button icon-button" data-delete-archived-content="${escapeHtml(content.id)}" aria-label="彻底删除${escapeHtml(content.title)}"><svg><use href="#icon-trash"></use></svg></button></span></div>`).join("") : '<p class="empty-state compact-empty">暂无归档内容</p>';
+  elements.actionOptions.innerHTML = favorites.length ? favorites.map((content) => `<button type="button" data-event-content-id="${escapeHtml(content.id)}" style="${swatchStyle(content, "action")}"><span class="action-dot" aria-hidden="true"></span><span class="action-copy"><strong>${escapeHtml(content.title)}</strong>${content.category ? `<small>${escapeHtml(content.category)}</small>` : ""}</span><svg><use href="#icon-arrow"></use></svg></button>`).join("") : '<p class="empty-content">还没有常用内容</p>';
+  elements.eventContentLibrary.innerHTML = favorites.length ? favorites.map((content, index) => `<div class="content-library-item"><button type="button" class="content-library-open" data-edit-event-content="${escapeHtml(content.id)}" aria-label="编辑${escapeHtml(content.title)}"><i style="${swatchStyle(content, "content")}" aria-hidden="true"></i><span class="content-library-copy"><strong>${escapeHtml(content.title)}</strong><small>${escapeHtml(content.category || "未分类")}</small></span></button><span class="order-actions"><button type="button" data-move-content="${escapeHtml(content.id)}" data-direction="-1" aria-label="上移${escapeHtml(content.title)}" ${index === 0 ? "disabled" : ""}><svg><use href="#icon-up"></use></svg></button><button type="button" data-move-content="${escapeHtml(content.id)}" data-direction="1" aria-label="下移${escapeHtml(content.title)}" ${index === favorites.length - 1 ? "disabled" : ""}><svg><use href="#icon-down"></use></svg></button></span><button type="button" class="edit-content-button" data-edit-event-content="${escapeHtml(content.id)}" aria-label="编辑${escapeHtml(content.title)}"><svg><use href="#icon-chevron"></use></svg></button></div>`).join("") : '<p class="empty-state">还没有常用内容。添加后，划选时间时就能直接使用。</p>';
+  elements.archivedEventContentLibrary.innerHTML = archived.length ? archived.map((content) => `<div class="content-library-item archived-item"><i style="${swatchStyle(content, "content")}" aria-hidden="true"></i><span class="content-library-copy"><strong>${escapeHtml(content.title)}</strong><small>${escapeHtml(content.category || "未分类")}</small></span><span class="archived-actions"><button type="button" class="secondary-button" data-restore-content="${escapeHtml(content.id)}">恢复</button><button type="button" class="danger-button icon-button" data-delete-archived-content="${escapeHtml(content.id)}" aria-label="彻底删除${escapeHtml(content.title)}"><svg><use href="#icon-trash"></use></svg></button></span></div>`).join("") : '<p class="empty-state compact-empty">暂无归档内容</p>';
 }
 
 function renderWeekStrip() {

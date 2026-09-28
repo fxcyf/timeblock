@@ -151,7 +151,7 @@ svg { width: 1.25rem; height: 1.25rem; fill: none; stroke: currentColor; stroke-
 .content-library-item { min-height: 58px; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 8px; padding: 7px 4px; border: 0; border-bottom: 1px solid var(--line); background: transparent; text-align: left; }
 .content-library-item.archived-item { grid-template-columns: 28px minmax(0, 1fr) auto; gap: 12px; }
 .content-library-item:last-child { border-bottom: 0; }
-.content-library-item > i, .content-library-open > i { width: 28px; height: 28px; display: grid; place-items: center; border: 1px solid var(--content-border); border-radius: 7px; color: var(--content-text); background: var(--content-surface); font-size: .6rem; font-style: normal; font-weight: 750; }
+.content-library-item > i, .content-library-open > i { width: 28px; height: 28px; border: 1px solid var(--content-border); border-radius: 7px; background: var(--content-surface); }
 .content-library-open { min-width: 0; min-height: 44px; display: grid; grid-template-columns: 28px minmax(0, 1fr); align-items: center; gap: 12px; padding: 0 8px 0 0; border: 0; border-radius: 9px; background: transparent; cursor: pointer; text-align: left; }
 .content-library-open:hover { background: var(--surface-soft); }
 .content-library-copy { min-width: 0; display: grid; gap: 2px; }
@@ -183,7 +183,7 @@ svg { width: 1.25rem; height: 1.25rem; fill: none; stroke: currentColor; stroke-
 .action-picker-heading button, .close-button { width: 40px; height: 40px; padding: 0; border: 0; border-radius: 9px; color: var(--muted); background: transparent; cursor: pointer; font-size: 1.5rem; }
 .action-options { max-height: min(360px, 48vh); display: grid; gap: 7px; overflow-y: auto; }
 .action-options > button { min-height: 56px; display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; align-items: center; gap: 11px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); cursor: pointer; text-align: left; }
-.action-dot { width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid var(--action-border); border-radius: 7px; color: var(--action-text); background: var(--action-surface); font-size: .6rem; font-weight: 750; }
+.action-dot { width: 30px; height: 30px; border: 1px solid var(--action-border); border-radius: 7px; background: var(--action-surface); }
 .action-copy { min-width: 0; display: grid; gap: 2px; }
 .action-copy strong { font-size: .9375rem; }
 .action-copy small { color: var(--muted); font-size: .8125rem; }
@@ -225,16 +225,16 @@ fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
 .color-options span.teal { background: var(--teal); }
 .color-options span.plum { background: var(--plum); }
 .color-options input:checked + span { border-color: var(--accent-dark); box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent); }
-.custom-color-control { --selected-custom-color: var(--apricot); --selected-custom-border: var(--apricot); --selected-custom-text: var(--text); margin-top: 10px; }
+.custom-color-control { --selected-custom-color: var(--apricot); --selected-custom-border: var(--apricot); margin-top: 10px; }
 .custom-color-toggle { min-height: 42px; display: inline-flex; align-items: center; gap: 9px; padding: 0 12px; border: 1px solid var(--line); border-radius: 9px; color: var(--ink); background: var(--surface); cursor: pointer; font-size: .875rem; font-weight: 700; }
 .custom-color-toggle:hover { background: var(--surface-soft); }
 .custom-color-toggle svg { width: 16px; height: 16px; margin-left: 3px; transform: rotate(90deg); transition: transform .18s ease; }
 .custom-color-toggle[aria-expanded="true"] svg { transform: rotate(-90deg); }
-.custom-color-preview { width: 28px; height: 28px; display: grid; place-items: center; border: 1px solid var(--selected-custom-border); border-radius: 7px; color: var(--selected-custom-text); background: var(--selected-custom-color); font-size: .58rem; font-weight: 750; }
+.custom-color-preview { width: 28px; height: 28px; border: 1px solid var(--selected-custom-border); border-radius: 7px; background: var(--selected-custom-color); }
 .custom-color-control.selected .custom-color-toggle { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent); }
 .custom-color-grid { display: grid; grid-template-columns: repeat(6, 38px); gap: 8px; width: fit-content; margin-top: 9px; padding: 11px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface-soft); }
 .custom-color-grid[hidden] { display: none; }
-.grid-color-button { width: 38px; height: 38px; padding: 0; border: 1px solid var(--grid-border); border-radius: 9px; color: var(--grid-text); background: var(--grid-surface); cursor: pointer; font-size: .65rem; font-weight: 750; }
+.grid-color-button { width: 38px; height: 38px; padding: 0; border: 1px solid var(--grid-border); border-radius: 9px; background: var(--grid-surface); cursor: pointer; }
 .grid-color-button:hover { transform: translateY(-1px); }
 .grid-color-button.selected { border-color: var(--surface); box-shadow: 0 0 0 3px var(--accent); }
 .color-source-note { margin: -3px 0 0; padding: 11px 12px; border: 1px solid var(--line); border-radius: 9px; color: var(--muted); background: var(--surface-soft); font-size: .82rem; }
@@ -258,7 +258,7 @@ fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
 .group-help { margin: -4px 0 0; color: var(--muted); font-size: .85rem; }
 
 .accent-options { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
-.accent-options > button { width: 44px; height: 44px; padding: 5px; border: 1px solid var(--swatch-border); border-radius: 10px; color: var(--swatch-text); background: var(--swatch); cursor: pointer; font-size: .65rem; font-weight: 750; }
+.accent-options > button { width: 44px; height: 44px; padding: 5px; border: 1px solid var(--swatch-border); border-radius: 10px; background: var(--swatch); cursor: pointer; }
 .accent-options > button.active { border-color: var(--surface); box-shadow: 0 0 0 3px var(--accent); }
 .accent-color-control { margin-top: 12px; }
 

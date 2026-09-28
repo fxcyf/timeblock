@@ -55,6 +55,7 @@ export const CUSTOM_COLOR_CHOICES = Object.freeze([
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 const INTERFACE_INK = STATIC_THEME_TOKENS.text;
 const WHITE = STATIC_THEME_TOKENS.surface;
+const BLACK = "#000000";
 
 export function normalizeColorValue(value, fallback = DEFAULT_RULE_COLOR) {
   const normalized = typeof value === "string" ? value.trim().toLowerCase() : "";
@@ -119,23 +120,26 @@ export function accentColorTokens(value) {
   };
 }
 
-function readableEventSurface(base) {
-  if (contrastRatio(INTERFACE_INK, base) >= 7) return base;
-  for (let step = 1; step <= 20; step += 1) {
-    const candidate = mix(base, WHITE, step / 20);
-    if (contrastRatio(INTERFACE_INK, candidate) >= 7) return candidate;
+function hueAwareText(base, background, minimum = 4.5) {
+  for (let step = 1; step <= 100; step += 1) {
+    const amount = step / 100;
+    for (const target of [BLACK, WHITE]) {
+      const candidate = mix(base, target, amount);
+      if (contrastRatio(candidate, background) >= minimum) return candidate;
+    }
   }
-  return WHITE;
+  return contrastRatio(BLACK, background) >= contrastRatio(WHITE, background) ? BLACK : WHITE;
 }
 
 export function eventColorTokens(value) {
   const base = resolveColor(value, DEFAULT_CONTENT_COLOR);
-  const surface = readableEventSurface(base);
+  const surface = base;
+  const text = hueAwareText(base, surface);
   return {
     base,
     surface,
-    border: towardContrast(mix(base, INTERFACE_INK, 0.14), surface, 1.5),
+    border: towardContrast(mix(base, text, 0.14), surface, 1.5, text),
     marker: base,
-    text: INTERFACE_INK,
+    text,
   };
 }
