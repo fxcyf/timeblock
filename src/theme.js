@@ -83,6 +83,6 @@ export function eventColorTokens(value) {
     surface,
     border: towardContrast(mix(base, WHITE, 0.48), surface, 1.5),
     marker: towardContrast(base, WHITE, 3),
-    text: towardContrast(mix(base, INTERFACE_INK, 0.38), surface, 4.5),
+    text: towardContrast(mix(base, INTERFACE_INK, 0.38), surface, 7),
   };
 }

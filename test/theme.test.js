@@ -28,9 +28,9 @@ test("builds readable theme tokens for light and dark accents", () => {
 });
 
 test("derives a consistent and readable role set for every event color", () => {
-  for (const color of [...Object.values(COLOR_PRESETS), "#ffffff", "#050505", "#ffea00"]) {
+  for (const color of [...Object.values(COLOR_PRESETS), "#ffffff", "#050505", "#ffea00", "#00ff00", "#00ffff", "#ff00ff"]) {
     const tokens = eventColorTokens(color);
-    assert.ok(contrastRatio(tokens.text, tokens.surface) >= 4.5);
+    assert.ok(contrastRatio(tokens.text, tokens.surface) >= 7);
     assert.ok(contrastRatio(tokens.marker, "#ffffff") >= 3);
     assert.match(tokens.surface, /^#[0-9a-f]{6}$/);
     assert.match(tokens.border, /^#[0-9a-f]{6}$/);
