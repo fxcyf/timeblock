@@ -1,4 +1,5 @@
 import { addDateKeyDays, dateFromKey } from "./calendar.js";
+import { DEFAULT_RULE_COLOR } from "./theme.js";
 
 function isInactive(rule, dateKey) {
   return (rule.inactiveRanges || []).some((range) => (
@@ -37,7 +38,8 @@ export function materializeRecurringForDate(rules, exceptions, dateKey) {
       category: override && Object.hasOwn(override, "category") ? override.category : (rule.category || null),
       start: override?.start ?? rule.start,
       end: override?.end ?? rule.start + rule.duration,
-      color: override?.color ?? rule.color ?? "sage",
+      contentId: override?.contentId ?? rule.contentId,
+      fallbackColor: override?.fallbackColor ?? override?.color ?? rule.fallbackColor ?? rule.color ?? DEFAULT_RULE_COLOR,
       sourceRuleId: rule.id,
       recurrenceDate,
       recurring: true,
@@ -55,7 +57,8 @@ export function upsertRecurrenceException(exceptions, rule, dateKey, changes = {
     category: Object.hasOwn(changes, "category") ? changes.category : (current?.category ?? rule.category ?? null),
     start: changes.start ?? current?.start ?? rule.start,
     end: changes.end ?? current?.end ?? rule.start + rule.duration,
-    color: changes.color ?? current?.color ?? rule.color ?? "sage",
+    contentId: changes.contentId ?? current?.contentId ?? rule.contentId,
+    fallbackColor: changes.fallbackColor ?? changes.color ?? current?.fallbackColor ?? current?.color ?? rule.fallbackColor ?? rule.color ?? DEFAULT_RULE_COLOR,
     cancelled: changes.cancelled === true,
   };
   const movedToDate = Object.hasOwn(changes, "movedToDate") ? changes.movedToDate : current?.movedToDate;

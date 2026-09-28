@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#f2f4f3" />
+    <meta name="theme-color" content="" />
     <meta name="description" content="Timeblock：用时间块快速安排一天与重复日程。" />
     <title>Timeblock · 快速安排时间</title>
     <link rel="stylesheet" href="styles.css" />
@@ -96,13 +96,8 @@
 
           <section class="manage-section" aria-labelledby="appearanceTitle">
             <div class="manage-heading"><div><h3 id="appearanceTitle">界面强调色</h3><p>仅用于操作和状态，不改变页面底色或内容颜色</p></div></div>
-            <div class="accent-options" id="accentOptions" aria-label="界面强调色预设">
-              <button type="button" data-accent-color="#a8d2cc" style="--swatch:#a8d2cc" aria-label="薄荷青"></button>
-              <button type="button" data-accent-color="#d7b7a9" style="--swatch:#d7b7a9" aria-label="陶粉"></button>
-              <button type="button" data-accent-color="#abc8e7" style="--swatch:#abc8e7" aria-label="雾蓝"></button>
-              <button type="button" data-accent-color="#c7b6e1" style="--swatch:#c7b6e1" aria-label="薰衣草"></button>
-            </div>
-            <div class="custom-color-control accent-color-control" data-custom-color-control="accentColor"><button type="button" class="custom-color-toggle" data-color-grid-toggle="accentColor" aria-expanded="false" aria-controls="accentColorGrid"><span class="custom-color-preview" aria-hidden="true"></span><span>更多颜色</span><svg><use href="#icon-chevron"></use></svg></button><input id="accentCustomColor" type="hidden" value="#a8d2cc" /><div class="custom-color-grid" id="accentColorGrid" data-custom-color-grid="accentColor" role="group" aria-label="更多界面强调色" hidden></div></div>
+            <div class="accent-options" id="accentOptions" aria-label="界面强调色预设"></div>
+            <div class="custom-color-control accent-color-control" data-custom-color-control="accentColor"><button type="button" class="custom-color-toggle" data-color-grid-toggle="accentColor" aria-expanded="false" aria-controls="accentColorGrid"><span class="custom-color-preview" aria-hidden="true">Aa</span><span>更多颜色</span><svg><use href="#icon-chevron"></use></svg></button><input id="accentCustomColor" type="hidden" /><div class="custom-color-grid" id="accentColorGrid" data-custom-color-grid="accentColor" role="group" aria-label="更多界面强调色" hidden></div></div>
           </section>
 
           <section class="manage-section" aria-labelledby="preferencesTitle">
@@ -172,7 +167,7 @@
           <label><input type="radio" name="contentColor" value="sand" aria-label="沙色" /><span class="sand"></span></label>
           <label><input type="radio" name="contentColor" value="teal" aria-label="青色" /><span class="teal"></span></label>
           <label><input type="radio" name="contentColor" value="plum" aria-label="梅紫" /><span class="plum"></span></label>
-        </div><div class="custom-color-control" data-custom-color-control="contentColor"><input class="sr-only" type="radio" name="contentColor" value="custom" aria-label="更多颜色" /><button type="button" class="custom-color-toggle" data-color-grid-toggle="contentColor" aria-expanded="false" aria-controls="contentColorGrid"><span class="custom-color-preview" aria-hidden="true"></span><span>更多颜色</span><svg><use href="#icon-chevron"></use></svg></button><input id="contentCustomColor" type="hidden" value="#f2b7a4" /><div class="custom-color-grid" id="contentColorGrid" data-custom-color-grid="contentColor" role="group" aria-label="更多内容颜色" hidden></div></div></fieldset>
+        </div><div class="custom-color-control" data-custom-color-control="contentColor"><input class="sr-only" type="radio" name="contentColor" value="custom" aria-label="更多颜色" /><button type="button" class="custom-color-toggle" data-color-grid-toggle="contentColor" aria-expanded="false" aria-controls="contentColorGrid"><span class="custom-color-preview" aria-hidden="true">Aa</span><span>更多颜色</span><svg><use href="#icon-chevron"></use></svg></button><input id="contentCustomColor" type="hidden" /><div class="custom-color-grid" id="contentColorGrid" data-custom-color-grid="contentColor" role="group" aria-label="更多内容颜色" hidden></div></div></fieldset>
         <label class="favorite-choice"><input id="contentFavorite" type="checkbox" /><span>保存为常用内容</span></label>
         <div class="dialog-error" id="contentError" role="alert"></div>
         <div class="content-form-actions"><button type="button" class="secondary-button" id="cancelContentButton">返回</button><button type="submit" class="primary-button">创建</button></div>
@@ -197,7 +192,7 @@
           <label><input type="radio" name="libraryContentColor" value="sand" /><span class="sand"></span></label>
           <label><input type="radio" name="libraryContentColor" value="teal" /><span class="teal"></span></label>
           <label><input type="radio" name="libraryContentColor" value="plum" /><span class="plum"></span></label>
-        </div><div class="custom-color-control" data-custom-color-control="libraryContentColor"><input class="sr-only" type="radio" name="libraryContentColor" value="custom" aria-label="更多颜色" /><button type="button" class="custom-color-toggle" data-color-grid-toggle="libraryContentColor" aria-expanded="false" aria-controls="libraryContentColorGrid"><span class="custom-color-preview" aria-hidden="true"></span><span>更多颜色</span><svg><use href="#icon-chevron"></use></svg></button><input id="libraryContentCustomColor" type="hidden" value="#f2b7a4" /><div class="custom-color-grid" id="libraryContentColorGrid" data-custom-color-grid="libraryContentColor" role="group" aria-label="更多内容颜色" hidden></div></div></fieldset>
+        </div><div class="custom-color-control" data-custom-color-control="libraryContentColor"><input class="sr-only" type="radio" name="libraryContentColor" value="custom" aria-label="更多颜色" /><button type="button" class="custom-color-toggle" data-color-grid-toggle="libraryContentColor" aria-expanded="false" aria-controls="libraryContentColorGrid"><span class="custom-color-preview" aria-hidden="true">Aa</span><span>更多颜色</span><svg><use href="#icon-chevron"></use></svg></button><input id="libraryContentCustomColor" type="hidden" /><div class="custom-color-grid" id="libraryContentColorGrid" data-custom-color-grid="libraryContentColor" role="group" aria-label="更多内容颜色" hidden></div></div></fieldset>
         <div class="dialog-error" id="libraryContentError" role="alert"></div>
         <div class="dialog-actions split content-dialog-actions"><button type="button" class="archive-button" id="archiveLibraryContentButton"><svg><use href="#icon-archive"></use></svg>归档</button><button type="button" class="danger-button" id="deleteLibraryContentButton"><svg><use href="#icon-trash"></use></svg>删除</button><span></span><button type="button" class="secondary-button" id="cancelLibraryContentButton">取消</button><button type="submit" class="primary-button">保存</button></div>
       </form>
@@ -214,7 +209,7 @@
           <label class="field"><span>开始</span><input id="blockStart" inputmode="numeric" placeholder="00:00" required /></label>
           <label class="field"><span>结束</span><input id="blockEnd" inputmode="numeric" placeholder="24:00" required /></label>
         </div>
-        <fieldset class="color-field"><legend>颜色</legend><div class="color-options">
+        <fieldset class="color-field" id="blockColorField"><legend>颜色</legend><div class="color-options">
           <label><input type="radio" name="blockColor" value="apricot" checked /><span class="apricot"></span></label>
           <label><input type="radio" name="blockColor" value="sage" /><span class="sage"></span></label>
           <label><input type="radio" name="blockColor" value="blue" /><span class="blue"></span></label>
@@ -223,7 +218,8 @@
           <label><input type="radio" name="blockColor" value="sand" /><span class="sand"></span></label>
           <label><input type="radio" name="blockColor" value="teal" /><span class="teal"></span></label>
           <label><input type="radio" name="blockColor" value="plum" /><span class="plum"></span></label>
-        </div><div class="custom-color-control" data-custom-color-control="blockColor"><input class="sr-only" type="radio" name="blockColor" value="custom" aria-label="更多颜色" /><button type="button" class="custom-color-toggle" data-color-grid-toggle="blockColor" aria-expanded="false" aria-controls="blockColorGrid"><span class="custom-color-preview" aria-hidden="true"></span><span>更多颜色</span><svg><use href="#icon-chevron"></use></svg></button><input id="blockCustomColor" type="hidden" value="#f2b7a4" /><div class="custom-color-grid" id="blockColorGrid" data-custom-color-grid="blockColor" role="group" aria-label="更多时间块颜色" hidden></div></div></fieldset>
+        </div><div class="custom-color-control" data-custom-color-control="blockColor"><input class="sr-only" type="radio" name="blockColor" value="custom" aria-label="更多颜色" /><button type="button" class="custom-color-toggle" data-color-grid-toggle="blockColor" aria-expanded="false" aria-controls="blockColorGrid"><span class="custom-color-preview" aria-hidden="true">Aa</span><span>更多颜色</span><svg><use href="#icon-chevron"></use></svg></button><input id="blockCustomColor" type="hidden" /><div class="custom-color-grid" id="blockColorGrid" data-custom-color-grid="blockColor" role="group" aria-label="更多时间块颜色" hidden></div></div></fieldset>
+        <p class="color-source-note" id="blockColorNote" hidden></p>
         <fieldset class="scope-field" id="blockScopeField" hidden><legend>应用范围</legend><label><input type="radio" name="blockScope" value="one" checked /><span>仅这一次</span></label><label><input type="radio" name="blockScope" value="future" /><span>这一次及以后</span></label></fieldset>
         <div class="dialog-error" id="blockError" role="alert"></div>
         <div class="dialog-actions split"><button type="button" class="danger-button" id="deleteBlockButton"><svg><use href="#icon-trash"></use></svg>删除</button><span></span><button type="button" class="secondary-button" id="cancelBlockButton">取消</button><button type="submit" class="primary-button">保存</button></div>
@@ -248,7 +244,7 @@
           <label><input type="radio" name="ruleColor" value="sand" /><span class="sand"></span></label>
           <label><input type="radio" name="ruleColor" value="teal" /><span class="teal"></span></label>
           <label><input type="radio" name="ruleColor" value="plum" /><span class="plum"></span></label>
-        </div><div class="custom-color-control" data-custom-color-control="ruleColor"><input class="sr-only" type="radio" name="ruleColor" value="custom" aria-label="更多颜色" /><button type="button" class="custom-color-toggle" data-color-grid-toggle="ruleColor" aria-expanded="false" aria-controls="ruleColorGrid"><span class="custom-color-preview" aria-hidden="true"></span><span>更多颜色</span><svg><use href="#icon-chevron"></use></svg></button><input id="ruleCustomColor" type="hidden" value="#b9d3b0" /><div class="custom-color-grid" id="ruleColorGrid" data-custom-color-grid="ruleColor" role="group" aria-label="更多重复日程颜色" hidden></div></div></fieldset>
+        </div><div class="custom-color-control" data-custom-color-control="ruleColor"><input class="sr-only" type="radio" name="ruleColor" value="custom" aria-label="更多颜色" /><button type="button" class="custom-color-toggle" data-color-grid-toggle="ruleColor" aria-expanded="false" aria-controls="ruleColorGrid"><span class="custom-color-preview" aria-hidden="true">Aa</span><span>更多颜色</span><svg><use href="#icon-chevron"></use></svg></button><input id="ruleCustomColor" type="hidden" /><div class="custom-color-grid" id="ruleColorGrid" data-custom-color-grid="ruleColor" role="group" aria-label="更多重复日程颜色" hidden></div></div></fieldset>
         <div class="dialog-error" id="ruleError" role="alert"></div>
         <div class="dialog-actions split"><button type="button" class="danger-button" id="deleteRuleButton"><svg><use href="#icon-trash"></use></svg>删除规则</button><span></span><button type="button" class="secondary-button" id="cancelRuleButton">取消</button><button type="submit" class="primary-button">保存</button></div>
       </form>

@@ -7,12 +7,32 @@ import {
   colorForEventContent,
   eventContentCategories,
   favoriteEventContents,
+  linkedContentColor,
   moveEventContent,
+  preserveContentColorFallback,
   removeEventContent,
   restoreEventContent,
   updateEventContent,
   upsertEventContent,
 } from "../src/content.js";
+
+test("resolves linked colors from current content before stored fallbacks", () => {
+  const item = { contentId: "read", fallbackColor: "apricot" };
+  assert.equal(linkedContentColor(item, [{ id: "read", color: "blue" }]), "blue");
+  assert.equal(linkedContentColor(item, []), "apricot");
+  assert.equal(linkedContentColor({}, []), "apricot");
+});
+
+test("captures the last visible color before linked content is deleted", () => {
+  const items = [
+    { id: "linked", contentId: "read", fallbackColor: "apricot" },
+    { id: "other", contentId: "walk", fallbackColor: "sage" },
+  ];
+  assert.deepEqual(preserveContentColorFallback(items, { id: "read", color: "blue" }), [
+    { id: "linked", contentId: "read", fallbackColor: "blue" },
+    items[1],
+  ]);
+});
 
 test("creates event content with an optional category and favorite state", () => {
   const result = upsertEventContent([], {

@@ -51,8 +51,40 @@ test("preserves safe custom colors and falls back from invalid imported settings
     blocksByDate: { "2026-08-30": [{ id: "b", title: "阅读", start: 600, end: 630, color: "url(bad)" }] },
     settings: { viewDayCount: 1, snapMinutes: 15, accentColor: "not-a-color" },
   }, "2026-08-30");
-  assert.equal(migrated.rules[0].color, "#345f58");
+  assert.equal(migrated.rules[0].fallbackColor, "#345f58");
   assert.equal(migrated.eventContents[0].color, "#a17c62");
-  assert.equal(migrated.blocksByDate["2026-08-30"][0].color, "apricot");
+  assert.equal(migrated.blocksByDate["2026-08-30"][0].fallbackColor, "apricot");
   assert.equal(migrated.settings.accentColor, "#a8d2cc");
+});
+
+test("migrates block and rule colors into linked content fallbacks", () => {
+  const migrated = migrateAppState({
+    rules: [{ id: "rule-read", title: "阅读", category: "兴趣", start: 600, duration: 30, days: [1], color: "blue" }],
+    eventContents: [{ id: "content-read", title: "阅读", category: "兴趣", status: "favorite", color: "blue" }],
+    recurrenceExceptions: [],
+    blocksByDate: { "2026-08-30": [{ id: "block-read", title: "阅读", category: "兴趣", start: 600, end: 630, color: "blue" }] },
+  }, "2026-08-30");
+
+  assert.equal(migrated.rules[0].contentId, "content-read");
+  assert.equal(migrated.rules[0].fallbackColor, "blue");
+  assert.equal(Object.hasOwn(migrated.rules[0], "color"), false);
+  assert.equal(migrated.blocksByDate["2026-08-30"][0].contentId, "content-read");
+  assert.equal(migrated.blocksByDate["2026-08-30"][0].fallbackColor, "blue");
+  assert.equal(Object.hasOwn(migrated.blocksByDate["2026-08-30"][0], "color"), false);
+});
+
+test("creates hidden one-time content for legacy blocks without a reusable match", () => {
+  const migrated = migrateAppState({
+    rules: [],
+    eventContents: [],
+    recurrenceExceptions: [],
+    blocksByDate: { "2026-08-30": [{ id: "block-tea", title: "泡茶", category: "休息", start: 600, end: 615, color: "rose" }] },
+  }, "2026-08-30");
+
+  const [block] = migrated.blocksByDate["2026-08-30"];
+  const content = migrated.eventContents.find((item) => item.id === block.contentId);
+  assert.equal(content.status, "oneTime");
+  assert.equal(content.color, "rose");
+  assert.equal(block.fallbackColor, "rose");
+  assert.deepEqual(migrateAppState(migrated, "2026-08-30"), migrated);
 });

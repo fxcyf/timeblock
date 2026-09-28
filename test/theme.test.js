@@ -2,14 +2,24 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  ACCENT_COLOR_PRESETS,
   COLOR_PRESETS,
   CUSTOM_COLOR_CHOICES,
+  DEFAULT_ACCENT_COLOR,
+  STATIC_THEME_TOKENS,
   accentColorTokens,
   contrastRatio,
   eventColorTokens,
   normalizeColorValue,
   resolveColor,
 } from "../src/theme.js";
+
+test("keeps runtime theme colors in one JavaScript source", () => {
+  assert.equal(DEFAULT_ACCENT_COLOR, "#a8d2cc");
+  assert.equal(ACCENT_COLOR_PRESETS.length, 4);
+  assert.equal(STATIC_THEME_TOKENS.canvas, "#f2f4f3");
+  assert.equal(STATIC_THEME_TOKENS.text, "#1f2925");
+});
 
 test("normalizes custom colors and falls back from unsafe values", () => {
   assert.equal(normalizeColorValue("#A1B2C3"), "#a1b2c3");
@@ -41,8 +51,16 @@ test("derives a consistent and readable role set for every event color", () => {
   for (const color of [...Object.values(COLOR_PRESETS), "#ffffff", "#050505", "#ffea00", "#00ff00", "#00ffff", "#ff00ff"]) {
     const tokens = eventColorTokens(color);
     assert.ok(contrastRatio(tokens.text, tokens.surface) >= 7);
-    assert.ok(contrastRatio(tokens.marker, "#ffffff") >= 3);
     assert.match(tokens.surface, /^#[0-9a-f]{6}$/);
     assert.match(tokens.border, /^#[0-9a-f]{6}$/);
+  }
+});
+
+test("uses each pastel as its actual event surface and marker", () => {
+  for (const [name, color] of Object.entries(COLOR_PRESETS)) {
+    const tokens = eventColorTokens(name);
+    assert.equal(tokens.surface, color);
+    assert.equal(tokens.marker, color);
+    assert.equal(tokens.text, STATIC_THEME_TOKENS.text);
   }
 });

@@ -4,9 +4,9 @@ import assert from "node:assert/strict";
 import { planGroupTransform, selectedDuration, targetForGroupDrag } from "../src/group.js";
 
 const selected = [
-  { date: "2026-08-30", block: { id: "a", title: "A", start: 540, end: 600, color: "sage", done: true } },
-  { date: "2026-08-30", block: { id: "b", title: "B", start: 600, end: 630, color: "blue", done: false } },
-  { date: "2026-08-31", block: { id: "r", title: "R", start: 570, end: 600, color: "lilac", recurring: true, sourceRuleId: "rule", recurrenceDate: "2026-08-31" } },
+  { date: "2026-08-30", block: { id: "a", contentId: "content-a", fallbackColor: "sage", title: "A", start: 540, end: 600, done: true } },
+  { date: "2026-08-30", block: { id: "b", contentId: "content-b", fallbackColor: "blue", title: "B", start: 600, end: 630, done: false } },
+  { date: "2026-08-31", block: { id: "r", contentId: "content-r", fallbackColor: "lilac", title: "R", start: 570, end: 600, recurring: true, sourceRuleId: "rule", recurrenceDate: "2026-08-31" } },
 ];
 
 test("adds the full duration of every selected block", () => {
@@ -34,6 +34,7 @@ test("copies with new IDs, drops legacy completion, and detaches recurring insta
   assert.equal(plan.ok, true);
   assert.deepEqual(plan.candidates.map((item) => item.block.id), ["copy-0", "copy-1", "copy-2"]);
   assert.ok(plan.candidates.every((item) => !Object.hasOwn(item.block, "done") && !item.block.recurring && !item.block.sourceRuleId));
+  assert.deepEqual(plan.candidates.map((item) => [item.block.contentId, item.block.fallbackColor]), [["content-a", "sage"], ["content-b", "blue"], ["content-r", "lilac"]]);
 });
 
 test("rejects the whole group on boundaries or external conflicts", () => {

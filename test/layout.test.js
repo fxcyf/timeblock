@@ -7,9 +7,12 @@ const css = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
 const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
 
 test("separates the neutral interface canvas from accent and event colors", () => {
-  assert.match(html, /<meta name="theme-color" content="#f2f4f3" \/>/);
+  assert.match(html, /<meta name="theme-color" content="" \/>/);
+  assert.doesNotMatch(html, /#[0-9a-f]{3,8}|rgba?\(/i);
   assert.match(html, />界面强调色</);
-  assert.match(css, /--canvas: #f2f4f3;/);
+  assert.doesNotMatch(css, /#[0-9a-f]{3,8}|rgba?\(/i);
+  assert.match(app, /STATIC_THEME_TOKENS/);
+  assert.match(app, /applyStaticThemeTokens/);
   assert.match(css, /\.time-block \{[^}]*background: var\(--block-surface\);/);
   assert.match(app, /eventColorTokens/);
   assert.doesNotMatch(app, /setAttribute\("content", tokens\.soft\)/);

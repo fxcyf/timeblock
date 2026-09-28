@@ -1,5 +1,5 @@
 import { migrateAppState } from "./state.js";
-import { normalizeColorValue } from "./theme.js";
+import { DEFAULT_ACCENT_COLOR, DEFAULT_CONTENT_COLOR, DEFAULT_RULE_COLOR, normalizeColorValue } from "./theme.js";
 
 const BACKUP_FORMAT = "timeblock-backup";
 const BACKUP_VERSION = 3;
@@ -26,7 +26,7 @@ function dateKey(value, label, optional = false) {
   return value;
 }
 
-function paletteColor(value, fallback = "apricot") {
+function paletteColor(value, fallback = DEFAULT_CONTENT_COLOR) {
   return normalizeColorValue(value, fallback);
 }
 
@@ -54,7 +54,7 @@ function normalizeRule(rule, legacy = false) {
   if (!Number.isInteger(rule.duration) || rule.duration <= 0 || start + rule.duration > 1440) throw new Error("重复日程时长无效");
   const days = [...new Set(rule.days)];
   if (!days.length || days.some((day) => !Number.isInteger(day) || day < 0 || day > 6)) throw new Error("重复日期无效");
-  return {
+  const normalized = {
     id: requiredText(rule.id, "重复日程 ID"),
     title: requiredText(rule.title, "重复日程名称"),
     category: optionalText(rule.category, "重复日程分类"),
@@ -63,10 +63,12 @@ function normalizeRule(rule, legacy = false) {
     days,
     startDate: legacy ? (rule.startDate || "2000-01-01") : dateKey(rule.startDate, "生效日期"),
     endDate: dateKey(rule.endDate, "结束日期", true),
-    color: paletteColor(rule.color, "sage"),
+    fallbackColor: paletteColor(rule.fallbackColor ?? rule.color, DEFAULT_RULE_COLOR),
     enabled: rule.enabled !== false,
     inactiveRanges: normalizeInactiveRanges(rule.inactiveRanges),
   };
+  if (Object.hasOwn(rule, "contentId")) normalized.contentId = requiredText(rule.contentId, "事件内容引用");
+  return normalized;
 }
 
 function normalizeContent(content, index) {
@@ -93,7 +95,7 @@ function normalizeBlock(block) {
     title: requiredText(block.title, "时间块名称"),
     start,
     end,
-    color: paletteColor(block.color),
+    fallbackColor: paletteColor(block.fallbackColor ?? block.color),
   };
   if (Object.hasOwn(block, "category")) normalized.category = optionalText(block.category, "时间块分类");
   if (Object.hasOwn(block, "contentId")) normalized.contentId = requiredText(block.contentId, "事件内容引用");
@@ -114,9 +116,10 @@ function normalizeException(exception) {
     category: optionalText(exception.category, "重复例外分类"),
     start,
     end,
-    color: paletteColor(exception.color, "sage"),
+    fallbackColor: paletteColor(exception.fallbackColor ?? exception.color, DEFAULT_RULE_COLOR),
     cancelled: exception.cancelled === true,
   };
+  if (Object.hasOwn(exception, "contentId")) normalized.contentId = requiredText(exception.contentId, "事件内容引用");
   if (exception.movedToDate) normalized.movedToDate = dateKey(exception.movedToDate, "例外移动日期");
   return normalized;
 }
@@ -131,24 +134,24 @@ function normalizeBlocksByDate(value) {
   return blocksByDate;
 }
 
-function normalizeV2State(state) {
+function normalizeV2State(state, migrationDate = new Date().toISOString().slice(0, 10)) {
   if (!isRecord(state) || !Array.isArray(state.rules) || !Array.isArray(state.eventContents) || !Array.isArray(state.recurrenceExceptions)) {
     throw new Error("备份状态结构无效");
   }
   const viewDayCount = state.settings?.viewDayCount;
   const snapMinutes = state.settings?.snapMinutes;
-  return {
+  return migrateAppState({
     schemaVersion: 2,
     settings: {
       viewDayCount: [1, 3, 7].includes(viewDayCount) ? viewDayCount : 1,
       snapMinutes: [5, 15, 30].includes(snapMinutes) ? snapMinutes : 15,
-      accentColor: paletteColor(state.settings?.accentColor, "#a8d2cc"),
+      accentColor: paletteColor(state.settings?.accentColor, DEFAULT_ACCENT_COLOR),
     },
     rules: state.rules.map((rule) => normalizeRule(rule)),
     recurrenceExceptions: state.recurrenceExceptions.map(normalizeException),
     eventContents: state.eventContents.map(normalizeContent),
     blocksByDate: normalizeBlocksByDate(state.blocksByDate),
-  };
+  }, migrationDate);
 }
 
 function normalizeLegacyState(state, migrationDate) {
@@ -167,7 +170,7 @@ function normalizeLegacyState(state, migrationDate) {
 }
 
 export function createBackup(state, exportedAt = new Date().toISOString()) {
-  return { format: BACKUP_FORMAT, version: BACKUP_VERSION, exportedAt, state: normalizeV2State(state) };
+  return { format: BACKUP_FORMAT, version: BACKUP_VERSION, exportedAt, state: normalizeV2State(state, exportedAt.slice(0, 10)) };
 }
 
 export function parseBackup(text) {
@@ -179,10 +182,10 @@ export function parseBackup(text) {
   }
   const migrationDate = typeof parsed?.exportedAt === "string" ? parsed.exportedAt.slice(0, 10) : new Date().toISOString().slice(0, 10);
   if (parsed?.format === BACKUP_FORMAT) {
-    if (parsed.version === 3 || parsed.version === 2) return normalizeV2State(parsed.state);
+    if (parsed.version === 3 || parsed.version === 2) return normalizeV2State(parsed.state, migrationDate);
     if (parsed.version === 1) return normalizeLegacyState(parsed.state, migrationDate);
     throw new Error("不支持这个备份版本");
   }
   if (Object.hasOwn(parsed || {}, "schemaVersion") && parsed.schemaVersion !== 2) throw new Error("不支持这个状态版本");
-  return parsed?.schemaVersion === 2 ? normalizeV2State(parsed) : normalizeLegacyState(parsed, migrationDate);
+  return parsed?.schemaVersion === 2 ? normalizeV2State(parsed, migrationDate) : normalizeLegacyState(parsed, migrationDate);
 }

@@ -1,5 +1,25 @@
+import { DEFAULT_CONTENT_COLOR } from "./theme.js";
+
 function cleanText(value) {
   return String(value ?? "").trim().replace(/\s+/g, " ");
+}
+
+export function linkedContentColor(item, contents, fallback = DEFAULT_CONTENT_COLOR) {
+  const linked = item?.contentId ? contents.find((content) => content.id === item.contentId) : null;
+  return linked?.color || item?.fallbackColor || item?.color || fallback;
+}
+
+export function preserveContentColorFallback(items, content) {
+  return items.map((item) => item.contentId === content.id ? { ...item, fallbackColor: content.color } : item);
+}
+
+export function matchingEventContent(contents, title, category) {
+  const normalizedTitle = cleanText(title).toLocaleLowerCase();
+  const normalizedCategory = cleanText(category) || null;
+  return contents.find((content) => (
+    cleanText(content.title).toLocaleLowerCase() === normalizedTitle
+    && (cleanText(content.category) || null) === normalizedCategory
+  )) || null;
 }
 
 export function eventContentStatus(content) {

@@ -13,8 +13,11 @@ import {
   archivedEventContents,
   colorForEventContent,
   eventContentCategories,
+  eventContentStatus,
   favoriteEventContents,
+  linkedContentColor,
   moveEventContent,
+  preserveContentColorFallback,
   removeEventContent,
   restoreEventContent,
   updateEventContent,
@@ -29,7 +32,19 @@ import { migrateAppState } from "./src/state.js";
 import { resolveCategoryChoice, validateRuleDraft } from "./src/forms.js";
 import { gridCellAtPoint, gridSelectionRange, splitBlockIntoHourSegments } from "./src/grid.js";
 import { planGroupTransform, selectedDuration, targetForGroupDrag } from "./src/group.js";
-import { accentColorTokens, COLOR_PRESETS, CUSTOM_COLOR_CHOICES, eventColorTokens, normalizeColorValue, resolveColor } from "./src/theme.js";
+import {
+  ACCENT_COLOR_PRESETS,
+  accentColorTokens,
+  COLOR_PRESETS,
+  CUSTOM_COLOR_CHOICES,
+  DEFAULT_ACCENT_COLOR,
+  DEFAULT_CONTENT_COLOR,
+  DEFAULT_RULE_COLOR,
+  eventColorTokens,
+  normalizeColorValue,
+  resolveColor,
+  STATIC_THEME_TOKENS,
+} from "./src/theme.js";
 import {
   materializeRecurringForDate,
   rulesConflictInRange,
@@ -52,10 +67,19 @@ const DAY_NAMES = ["日", "一", "二", "三", "四", "五", "六"];
 const FULL_DAY_NAMES = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
 const COLORS = Object.keys(COLOR_PRESETS);
 
+function applyStaticThemeTokens() {
+  const root = document.documentElement.style;
+  for (const [name, value] of Object.entries(STATIC_THEME_TOKENS)) root.setProperty(`--${name}`, value);
+  for (const [name, value] of Object.entries(COLOR_PRESETS)) root.setProperty(`--${name}`, value);
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", STATIC_THEME_TOKENS.canvas);
+}
+
+applyStaticThemeTokens();
+
 const defaultRules = [
-  { id: "dinner", title: "晚餐 & 放空", category: "用餐", start: 19 * 60, duration: 45, days: [0, 1, 2, 3, 4, 5, 6], startDate: "2000-01-01", endDate: null, color: "apricot", enabled: true, inactiveRanges: [] },
-  { id: "workout", title: "运动一下", category: "健康", start: 20 * 60 + 10, duration: 50, days: [2, 4, 6], startDate: "2000-01-01", endDate: null, color: "sage", enabled: true, inactiveRanges: [] },
-  { id: "reading", title: "安静阅读", category: "兴趣", start: 21 * 60 + 20, duration: 30, days: [0, 1, 3, 5], startDate: "2000-01-01", endDate: null, color: "blue", enabled: true, inactiveRanges: [] },
+  { id: "dinner", contentId: "content-dinner", fallbackColor: "apricot", title: "晚餐 & 放空", category: "用餐", start: 19 * 60, duration: 45, days: [0, 1, 2, 3, 4, 5, 6], startDate: "2000-01-01", endDate: null, enabled: true, inactiveRanges: [] },
+  { id: "workout", contentId: "content-workout", fallbackColor: "sage", title: "运动一下", category: "健康", start: 20 * 60 + 10, duration: 50, days: [2, 4, 6], startDate: "2000-01-01", endDate: null, enabled: true, inactiveRanges: [] },
+  { id: "reading", contentId: "content-reading", fallbackColor: "blue", title: "安静阅读", category: "兴趣", start: 21 * 60 + 20, duration: 30, days: [0, 1, 3, 5], startDate: "2000-01-01", endDate: null, enabled: true, inactiveRanges: [] },
 ];
 
 const defaultEventContents = [
@@ -94,7 +118,7 @@ let pendingCloudRecord = null;
 const cloud = createSupabaseCloud({ projectUrl: SUPABASE_URL, publishableKey: SUPABASE_PUBLISHABLE_KEY });
 
 const elements = Object.fromEntries([
-  "accentCustomColor", "accentOptions", "actionOptions", "actionPicker", "archiveLibraryContentButton", "archivedEventContentLibrary", "blockCategory", "blockCustomColor", "blockDate", "blockDialog", "blockDialogKicker", "blockDialogTitle", "blockEnd", "blockError", "blockForm", "blockId", "blockOriginalDate", "blockScopeField", "blockStart", "blockTitle", "cancelBlockButton", "cancelContentButton", "cancelGroupButton", "cancelLibraryContentButton", "cancelRuleButton", "cancelSelectionButton", "categoryOptions", "clearDataButton", "closeActionPicker", "closeBlockButton", "closeGroupButton", "closeLibraryContentButton", "closeRuleButton", "cloudAccount", "cloudAccountEmail", "cloudAuthForm", "cloudConflict", "cloudEmail", "cloudPassword", "cloudSignInButton", "cloudSignOutButton", "cloudSignUpButton", "cloudStatus", "cloudSyncButton", "cloudSyncStatus", "cloudUseLocalButton", "cloudUseRemoteButton", "contentCategory", "contentCustomColor", "contentError", "contentFavorite", "contentForm", "contentListView", "contentNewCategory", "contentNewCategoryField", "contentTitle", "copySelectionButton", "dataSummary", "dateEyebrow", "dayOptions", "defaultViewSetting", "deleteBlockButton", "deleteLibraryContentButton", "deleteRuleButton", "deleteSelectionButton", "eventContentLibrary", "exportDataButton", "groupDate", "groupDialog", "groupDialogTitle", "groupError", "groupForm", "groupMode", "groupStart", "importDataButton", "importDataFile", "libraryContentCategory", "libraryContentCustomColor", "libraryContentDialog", "libraryContentDialogTitle", "libraryContentError", "libraryContentForm", "libraryContentId", "libraryContentNewCategory", "libraryContentNewCategoryField", "libraryContentTitle", "manageView", "newContentButton", "newFavoriteButton", "newRuleButton", "nextRangeButton", "previousRangeButton", "recurringView", "ruleCategory", "ruleCustomColor", "ruleDialog", "ruleDialogTitle", "ruleDuration", "ruleEndDate", "ruleError", "ruleForm", "ruleId", "ruleList", "ruleStart", "ruleStartDate", "ruleTitle", "scheduleSyncButton", "selectedRange", "selectionCount", "selectionModeButton", "selectionToolbar", "shift15Button", "shift30Button", "snapSetting", "timeAxis", "timeline", "timelineDays", "timelineHeaders", "timelineScroll", "toast", "todayButton", "todayView", "topbar", "undoButton", "viewTitle", "weekStrip",
+  "accentCustomColor", "accentOptions", "actionOptions", "actionPicker", "archiveLibraryContentButton", "archivedEventContentLibrary", "blockCategory", "blockColorField", "blockColorNote", "blockCustomColor", "blockDate", "blockDialog", "blockDialogKicker", "blockDialogTitle", "blockEnd", "blockError", "blockForm", "blockId", "blockOriginalDate", "blockScopeField", "blockStart", "blockTitle", "cancelBlockButton", "cancelContentButton", "cancelGroupButton", "cancelLibraryContentButton", "cancelRuleButton", "cancelSelectionButton", "categoryOptions", "clearDataButton", "closeActionPicker", "closeBlockButton", "closeGroupButton", "closeLibraryContentButton", "closeRuleButton", "cloudAccount", "cloudAccountEmail", "cloudAuthForm", "cloudConflict", "cloudEmail", "cloudPassword", "cloudSignInButton", "cloudSignOutButton", "cloudSignUpButton", "cloudStatus", "cloudSyncButton", "cloudSyncStatus", "cloudUseLocalButton", "cloudUseRemoteButton", "contentCategory", "contentCustomColor", "contentError", "contentFavorite", "contentForm", "contentListView", "contentNewCategory", "contentNewCategoryField", "contentTitle", "copySelectionButton", "dataSummary", "dateEyebrow", "dayOptions", "defaultViewSetting", "deleteBlockButton", "deleteLibraryContentButton", "deleteRuleButton", "deleteSelectionButton", "eventContentLibrary", "exportDataButton", "groupDate", "groupDialog", "groupDialogTitle", "groupError", "groupForm", "groupMode", "groupStart", "importDataButton", "importDataFile", "libraryContentCategory", "libraryContentCustomColor", "libraryContentDialog", "libraryContentDialogTitle", "libraryContentError", "libraryContentForm", "libraryContentId", "libraryContentNewCategory", "libraryContentNewCategoryField", "libraryContentTitle", "manageView", "newContentButton", "newFavoriteButton", "newRuleButton", "nextRangeButton", "previousRangeButton", "recurringView", "ruleCategory", "ruleCustomColor", "ruleDialog", "ruleDialogTitle", "ruleDuration", "ruleEndDate", "ruleError", "ruleForm", "ruleId", "ruleList", "ruleStart", "ruleStartDate", "ruleTitle", "scheduleSyncButton", "selectedRange", "selectionCount", "selectionModeButton", "selectionToolbar", "shift15Button", "shift30Button", "snapSetting", "timeAxis", "timeline", "timelineDays", "timelineHeaders", "timelineScroll", "toast", "todayButton", "todayView", "topbar", "undoButton", "viewTitle", "weekStrip",
 ].map((id) => [id, document.querySelector(`#${id}`)]));
 
 function toDateKey(date) {
@@ -156,16 +180,54 @@ function escapeHtml(value) {
   return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
 }
 
-function safeColor(color, fallback = "apricot") {
+function safeColor(color, fallback = DEFAULT_CONTENT_COLOR) {
   return normalizeColorValue(color, fallback);
 }
 
-function colorStyle(color) {
-  const tokens = eventColorTokens(color);
+function colorStyle(item) {
+  const tokens = eventColorTokens(linkedContentColor(item, state.eventContents));
   return `--block-surface:${tokens.surface};--block-border:${tokens.border};--block-marker:${tokens.marker};--block-text:${tokens.text}`;
 }
 
-function setColorChoice(form, name, customInput, color, fallback = "apricot") {
+function swatchStyle(item, prefix) {
+  const tokens = eventColorTokens(linkedContentColor(item, state.eventContents));
+  return `--${prefix}-surface:${tokens.surface};--${prefix}-border:${tokens.border};--${prefix}-text:${tokens.text}`;
+}
+
+function linkedContent(item) {
+  return item?.contentId ? state.eventContents.find((content) => content.id === item.contentId) || null : null;
+}
+
+function addOneTimeContent({ title, category, color }) {
+  const content = {
+    id: `content-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    title,
+    category: category || null,
+    status: "oneTime",
+    color: safeColor(color, DEFAULT_CONTENT_COLOR),
+    sortOrder: state.eventContents.length,
+  };
+  state.eventContents = [...state.eventContents, content];
+  return content;
+}
+
+function updateLinkedContentColor(item, color) {
+  const content = linkedContent(item);
+  if (!content) return;
+  const normalized = safeColor(color, DEFAULT_CONTENT_COLOR);
+  state.eventContents = state.eventContents.map((entry) => entry.id === content.id ? { ...entry, color: normalized } : entry);
+}
+
+function preserveDeletedContentFallback(content) {
+  state.rules = preserveContentColorFallback(state.rules, content);
+  state.recurrenceExceptions = preserveContentColorFallback(state.recurrenceExceptions, content);
+  state.blocksByDate = Object.fromEntries(Object.entries(state.blocksByDate).map(([dateKey, blocks]) => [
+    dateKey,
+    preserveContentColorFallback(blocks, content),
+  ]));
+}
+
+function setColorChoice(form, name, customInput, color, fallback = DEFAULT_CONTENT_COLOR) {
   const normalized = safeColor(color, fallback);
   const preset = COLORS.includes(normalized);
   const radio = form.querySelector(`[name="${name}"][value="${preset ? normalized : "custom"}"]`);
@@ -174,7 +236,7 @@ function setColorChoice(form, name, customInput, color, fallback = "apricot") {
   syncCustomColorControl(name, customInput?.value || resolveColor(normalized, fallback), !preset);
 }
 
-function readColorChoice(form, name, customInput, fallback = "apricot") {
+function readColorChoice(form, name, customInput, fallback = DEFAULT_CONTENT_COLOR) {
   const value = form.querySelector(`[name="${name}"]:checked`)?.value;
   return value === "custom" ? safeColor(customInput?.value, fallback) : safeColor(value, fallback);
 }
@@ -182,8 +244,12 @@ function readColorChoice(form, name, customInput, fallback = "apricot") {
 function syncCustomColorControl(name, value, selected = false) {
   const control = document.querySelector(`[data-custom-color-control="${name}"]`);
   if (!control) return;
-  const color = resolveColor(value, name === "accentColor" ? "#a8d2cc" : "apricot");
-  control.style.setProperty("--selected-custom-color", color);
+  const isAccent = name === "accentColor";
+  const color = resolveColor(value, isAccent ? DEFAULT_ACCENT_COLOR : DEFAULT_CONTENT_COLOR);
+  const tokens = isAccent ? { surface: accentColorTokens(color).accent, border: accentColorTokens(color).strong, text: accentColorTokens(color).onAccent } : eventColorTokens(color);
+  control.style.setProperty("--selected-custom-color", tokens.surface);
+  control.style.setProperty("--selected-custom-border", tokens.border);
+  control.style.setProperty("--selected-custom-text", tokens.text);
   control.classList.toggle("selected", selected);
   control.querySelectorAll("[data-grid-color]").forEach((button) => {
     const active = selected && button.dataset.gridColor === color;
@@ -193,8 +259,22 @@ function syncCustomColorControl(name, value, selected = false) {
 }
 
 function initializeCustomColorGrids() {
-  const buttons = CUSTOM_COLOR_CHOICES.map(({ value, label }) => `<button type="button" class="grid-color-button" data-grid-color="${value}" style="--grid-color:${value}" aria-label="${label}" title="${label}" aria-pressed="false"></button>`).join("");
-  document.querySelectorAll("[data-custom-color-grid]").forEach((grid) => { grid.innerHTML = buttons; });
+  elements.accentOptions.innerHTML = ACCENT_COLOR_PRESETS.map(({ value, label }) => {
+    const tokens = accentColorTokens(value);
+    return `<button type="button" data-accent-color="${value}" style="--swatch:${tokens.accent};--swatch-border:${tokens.strong};--swatch-text:${tokens.onAccent}" aria-label="${label}" title="${label}">Aa</button>`;
+  }).join("");
+  document.querySelectorAll("[data-custom-color-grid]").forEach((grid) => {
+    const isAccent = grid.dataset.customColorGrid === "accentColor";
+    grid.innerHTML = CUSTOM_COLOR_CHOICES.map(({ value, label }) => {
+      const tokens = isAccent ? { surface: accentColorTokens(value).accent, border: accentColorTokens(value).strong, text: accentColorTokens(value).onAccent } : eventColorTokens(value);
+      return `<button type="button" class="grid-color-button" data-grid-color="${value}" style="--grid-surface:${tokens.surface};--grid-border:${tokens.border};--grid-text:${tokens.text}" aria-label="${label}" title="${label}" aria-pressed="false">Aa</button>`;
+    }).join("");
+  });
+  elements.contentCustomColor.value = resolveColor(DEFAULT_CONTENT_COLOR);
+  elements.blockCustomColor.value = resolveColor(DEFAULT_CONTENT_COLOR);
+  elements.ruleCustomColor.value = resolveColor(DEFAULT_RULE_COLOR);
+  elements.libraryContentCustomColor.value = resolveColor(DEFAULT_CONTENT_COLOR);
+  elements.accentCustomColor.value = DEFAULT_ACCENT_COLOR;
   for (const [input, name] of [[elements.contentCustomColor, "contentColor"], [elements.blockCustomColor, "blockColor"], [elements.ruleCustomColor, "ruleColor"], [elements.libraryContentCustomColor, "libraryContentColor"], [elements.accentCustomColor, "accentColor"]]) {
     syncCustomColorControl(name, input.value);
   }
@@ -215,7 +295,7 @@ function chooseGridColor(button) {
   const name = control?.dataset.customColorControl;
   const input = control?.querySelector('input[type="hidden"]');
   if (!name || !input) return;
-  const color = safeColor(button.dataset.gridColor, "apricot");
+  const color = safeColor(button.dataset.gridColor, name === "accentColor" ? DEFAULT_ACCENT_COLOR : DEFAULT_CONTENT_COLOR);
   input.value = color;
   if (name === "accentColor") {
     state.settings.accentColor = color;
@@ -622,7 +702,7 @@ function configureBlockArticle(article, block, dateKey, segment = null) {
   article.dataset.id = block.id;
   article.dataset.date = dateKey;
   article.dataset.recurring = block.recurring ? "true" : "false";
-  article.style.cssText += colorStyle(block.color);
+  article.style.cssText += colorStyle(block);
   article.tabIndex = 0;
   article.setAttribute("role", "button");
   article.setAttribute("aria-pressed", selectionMode ? String(selected) : "false");
@@ -681,21 +761,21 @@ function renderEventContents() {
   populateCategorySelect(elements.libraryContentCategory, categories);
   syncNewCategoryField(elements.contentCategory, elements.contentNewCategoryField, elements.contentNewCategory);
   syncNewCategoryField(elements.libraryContentCategory, elements.libraryContentNewCategoryField, elements.libraryContentNewCategory);
-  elements.actionOptions.innerHTML = favorites.length ? favorites.map((content) => `<button type="button" data-event-content-id="${escapeHtml(content.id)}" style="--action-color:${eventColorTokens(content.color).marker}"><span class="action-dot"></span><span class="action-copy"><strong>${escapeHtml(content.title)}</strong>${content.category ? `<small>${escapeHtml(content.category)}</small>` : ""}</span><svg><use href="#icon-arrow"></use></svg></button>`).join("") : '<p class="empty-content">还没有常用内容</p>';
-  elements.eventContentLibrary.innerHTML = favorites.length ? favorites.map((content, index) => `<div class="content-library-item"><button type="button" class="content-library-open" data-edit-event-content="${escapeHtml(content.id)}" aria-label="编辑${escapeHtml(content.title)}"><i style="--content-color:${eventColorTokens(content.color).marker}" aria-hidden="true"></i><span class="content-library-copy"><strong>${escapeHtml(content.title)}</strong><small>${escapeHtml(content.category || "未分类")}</small></span></button><span class="order-actions"><button type="button" data-move-content="${escapeHtml(content.id)}" data-direction="-1" aria-label="上移${escapeHtml(content.title)}" ${index === 0 ? "disabled" : ""}><svg><use href="#icon-up"></use></svg></button><button type="button" data-move-content="${escapeHtml(content.id)}" data-direction="1" aria-label="下移${escapeHtml(content.title)}" ${index === favorites.length - 1 ? "disabled" : ""}><svg><use href="#icon-down"></use></svg></button></span><button type="button" class="edit-content-button" data-edit-event-content="${escapeHtml(content.id)}" aria-label="编辑${escapeHtml(content.title)}"><svg><use href="#icon-chevron"></use></svg></button></div>`).join("") : '<p class="empty-state">还没有常用内容。添加后，划选时间时就能直接使用。</p>';
-  elements.archivedEventContentLibrary.innerHTML = archived.length ? archived.map((content) => `<div class="content-library-item archived-item"><i style="--content-color:${eventColorTokens(content.color).marker}" aria-hidden="true"></i><span class="content-library-copy"><strong>${escapeHtml(content.title)}</strong><small>${escapeHtml(content.category || "未分类")}</small></span><span class="archived-actions"><button type="button" class="secondary-button" data-restore-content="${escapeHtml(content.id)}">恢复</button><button type="button" class="danger-button icon-button" data-delete-archived-content="${escapeHtml(content.id)}" aria-label="彻底删除${escapeHtml(content.title)}"><svg><use href="#icon-trash"></use></svg></button></span></div>`).join("") : '<p class="empty-state compact-empty">暂无归档内容</p>';
+  elements.actionOptions.innerHTML = favorites.length ? favorites.map((content) => `<button type="button" data-event-content-id="${escapeHtml(content.id)}" style="${swatchStyle(content, "action")}"><span class="action-dot">Aa</span><span class="action-copy"><strong>${escapeHtml(content.title)}</strong>${content.category ? `<small>${escapeHtml(content.category)}</small>` : ""}</span><svg><use href="#icon-arrow"></use></svg></button>`).join("") : '<p class="empty-content">还没有常用内容</p>';
+  elements.eventContentLibrary.innerHTML = favorites.length ? favorites.map((content, index) => `<div class="content-library-item"><button type="button" class="content-library-open" data-edit-event-content="${escapeHtml(content.id)}" aria-label="编辑${escapeHtml(content.title)}"><i style="${swatchStyle(content, "content")}" aria-hidden="true">Aa</i><span class="content-library-copy"><strong>${escapeHtml(content.title)}</strong><small>${escapeHtml(content.category || "未分类")}</small></span></button><span class="order-actions"><button type="button" data-move-content="${escapeHtml(content.id)}" data-direction="-1" aria-label="上移${escapeHtml(content.title)}" ${index === 0 ? "disabled" : ""}><svg><use href="#icon-up"></use></svg></button><button type="button" data-move-content="${escapeHtml(content.id)}" data-direction="1" aria-label="下移${escapeHtml(content.title)}" ${index === favorites.length - 1 ? "disabled" : ""}><svg><use href="#icon-down"></use></svg></button></span><button type="button" class="edit-content-button" data-edit-event-content="${escapeHtml(content.id)}" aria-label="编辑${escapeHtml(content.title)}"><svg><use href="#icon-chevron"></use></svg></button></div>`).join("") : '<p class="empty-state">还没有常用内容。添加后，划选时间时就能直接使用。</p>';
+  elements.archivedEventContentLibrary.innerHTML = archived.length ? archived.map((content) => `<div class="content-library-item archived-item"><i style="${swatchStyle(content, "content")}" aria-hidden="true">Aa</i><span class="content-library-copy"><strong>${escapeHtml(content.title)}</strong><small>${escapeHtml(content.category || "未分类")}</small></span><span class="archived-actions"><button type="button" class="secondary-button" data-restore-content="${escapeHtml(content.id)}">恢复</button><button type="button" class="danger-button icon-button" data-delete-archived-content="${escapeHtml(content.id)}" aria-label="彻底删除${escapeHtml(content.title)}"><svg><use href="#icon-trash"></use></svg></button></span></div>`).join("") : '<p class="empty-state compact-empty">暂无归档内容</p>';
 }
 
 function renderWeekStrip() {
   elements.weekStrip.innerHTML = buildVisibleDateKeys(todayDateKey, 7).map((dateKey) => {
     const parts = dateParts(dateKey);
     const instances = recurringBlocksForDate(dateKey);
-    return `<div class="week-day${dateKey === todayDateKey ? " today" : ""}"><span>${FULL_DAY_NAMES[parts.weekday]}</span><strong>${parts.day}</strong><div class="week-marks">${instances.map((block) => `<i style="--mark-color:${eventColorTokens(block.color).marker}"></i>`).join("")}</div></div>`;
+    return `<div class="week-day${dateKey === todayDateKey ? " today" : ""}"><span>${FULL_DAY_NAMES[parts.weekday]}</span><strong>${parts.day}</strong><div class="week-marks">${instances.map((block) => `<i style="${swatchStyle(block, "mark")}"></i>`).join("")}</div></div>`;
   }).join("");
 }
 
 function renderRuleList() {
-  elements.ruleList.innerHTML = state.rules.length ? state.rules.map((rule) => `<article class="rule-card${rule.enabled ? "" : " disabled"}" style="--rule-color:${eventColorTokens(rule.color).marker}"><span class="rule-color"></span><div class="rule-main"><strong>${escapeHtml(rule.title)}</strong><span class="rule-meta">${formatTime(rule.start)} · ${formatDuration(rule.duration)}${rule.endDate ? ` · 至 ${escapeHtml(rule.endDate)}` : ""}</span></div><div class="day-chips" aria-label="重复日期">${DAY_ORDER.map((day) => `<span class="${rule.days.includes(day) ? "on" : ""}">${DAY_NAMES[day]}</span>`).join("")}</div><div class="rule-actions"><button type="button" class="rule-edit" data-edit-rule="${escapeHtml(rule.id)}">编辑</button><label class="switch" aria-label="${rule.enabled ? "暂停" : "启用"}${escapeHtml(rule.title)}"><input type="checkbox" data-toggle-rule="${escapeHtml(rule.id)}" ${rule.enabled ? "checked" : ""} /><span></span></label></div></article>`).join("") : '<p class="empty-state">还没有重复日程。创建后，它会按规则动态出现在时间轴上。</p>';
+  elements.ruleList.innerHTML = state.rules.length ? state.rules.map((rule) => `<article class="rule-card${rule.enabled ? "" : " disabled"}" style="${swatchStyle(rule, "rule")}"><span class="rule-color"></span><div class="rule-main"><strong>${escapeHtml(rule.title)}</strong><span class="rule-meta">${formatTime(rule.start)} · ${formatDuration(rule.duration)}${rule.endDate ? ` · 至 ${escapeHtml(rule.endDate)}` : ""}</span></div><div class="day-chips" aria-label="重复日期">${DAY_ORDER.map((day) => `<span class="${rule.days.includes(day) ? "on" : ""}">${DAY_NAMES[day]}</span>`).join("")}</div><div class="rule-actions"><button type="button" class="rule-edit" data-edit-rule="${escapeHtml(rule.id)}">编辑</button><label class="switch" aria-label="${rule.enabled ? "暂停" : "启用"}${escapeHtml(rule.title)}"><input type="checkbox" data-toggle-rule="${escapeHtml(rule.id)}" ${rule.enabled ? "checked" : ""} /><span></span></label></div></article>`).join("") : '<p class="empty-state">还没有重复日程。创建后，它会按规则动态出现在时间轴上。</p>';
 }
 
 function renderManagement() {
@@ -703,7 +783,7 @@ function renderManagement() {
   elements.dataSummary.textContent = `${manualCount} 个手动时间块 · ${state.rules.length} 条重复规则 · ${favoriteEventContents(state.eventContents).length} 个常用内容`;
   elements.defaultViewSetting.value = String(state.settings.viewDayCount);
   elements.snapSetting.value = String(state.settings.snapMinutes);
-  const accent = resolveColor(state.settings.accentColor, "#a8d2cc");
+  const accent = resolveColor(state.settings.accentColor, DEFAULT_ACCENT_COLOR);
   const accentPresets = [...elements.accentOptions.querySelectorAll("[data-accent-color]")];
   elements.accentCustomColor.value = accent;
   accentPresets.forEach((button) => button.classList.toggle("active", button.dataset.accentColor === accent));
@@ -785,7 +865,7 @@ function openBlockDialog(id, dateKey) {
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
     const requested = dateKey === todayDateKey ? Math.ceil(currentMinutes / state.settings.snapMinutes) * state.settings.snapMinutes : DAY_START;
     const slot = findNextFreeSlot(blocksForDate(dateKey), requested, DEFAULT_BLOCK_DURATION, DAY_START, DAY_END) || { start: DAY_START, end: DEFAULT_BLOCK_DURATION };
-    draft = { title: "", category: null, start: slot.start, end: slot.end, color: "apricot" };
+    draft = { title: "", category: null, start: slot.start, end: slot.end, fallbackColor: DEFAULT_CONTENT_COLOR };
   }
   elements.blockForm.reset();
   elements.blockError.textContent = "";
@@ -800,7 +880,12 @@ function openBlockDialog(id, dateKey) {
   elements.blockEnd.value = displayScheduleTime(draft.end);
   elements.blockScopeField.hidden = !existing?.recurring;
   elements.deleteBlockButton.hidden = !existing;
-  setColorChoice(elements.blockForm, "blockColor", elements.blockCustomColor, draft.color);
+  const sourceContent = linkedContent(draft);
+  const followsManagedContent = sourceContent && eventContentStatus(sourceContent) !== "oneTime";
+  elements.blockColorField.hidden = Boolean(followsManagedContent);
+  elements.blockColorNote.hidden = !followsManagedContent;
+  if (followsManagedContent) elements.blockColorNote.textContent = `颜色跟随“${sourceContent.title}”，可在管理页修改。`;
+  setColorChoice(elements.blockForm, "blockColor", elements.blockCustomColor, linkedContentColor(draft, state.eventContents));
   elements.blockDialog.showModal();
   setTimeout(() => elements.blockTitle.focus(), 40);
 }
@@ -812,14 +897,16 @@ function closeBlockDialog() {
 }
 
 function blockDraftFromForm(existing) {
-  return {
+  const candidate = {
     ...existing,
     title: elements.blockTitle.value.trim(),
     category: elements.blockCategory.value.trim() || null,
     start: parseScheduleTime(elements.blockStart.value),
     end: parseScheduleTime(elements.blockEnd.value, true),
-    color: readColorChoice(elements.blockForm, "blockColor", elements.blockCustomColor),
+    fallbackColor: readColorChoice(elements.blockForm, "blockColor", elements.blockCustomColor),
   };
+  delete candidate.color;
+  return candidate;
 }
 
 function validateBlockDraft(candidate, targetDate, ignoredId = null) {
@@ -849,14 +936,16 @@ function saveBlock(event) {
     if (scope === "future") {
       if (targetDate !== originalDate) { elements.blockError.textContent = "“这一次及以后”不能同时更换日期；可以先保存时间，再单独调整日期。"; return; }
       const splitDate = existing.recurrenceDate || originalDate;
-      const nextRuleDraft = { ...rule, id: `rule-${Date.now()}`, title: candidate.title, category: candidate.category, start: candidate.start, duration: candidate.end - candidate.start, startDate: splitDate, color: candidate.color };
+      const nextRuleDraft = { ...rule, id: `rule-${Date.now()}`, title: candidate.title, category: candidate.category, start: candidate.start, duration: candidate.end - candidate.start, startDate: splitDate, contentId: candidate.contentId, fallbackColor: candidate.fallbackColor };
       if (state.rules.some((item) => item.id !== rule.id && item.enabled && rulesConflictInRange(nextRuleDraft, item))) { elements.blockError.textContent = "调整后的规则与另一条重复日程重叠。"; return; }
+      updateLinkedContentColor(candidate, candidate.fallbackColor);
       const { previousRule, nextRule } = splitRecurringRule(rule, splitDate, nextRuleDraft);
       state.rules = [...state.rules.filter((item) => item.id !== rule.id), ...(previousRule ? [previousRule] : []), nextRule];
       state.recurrenceExceptions = state.recurrenceExceptions.filter((item) => item.ruleId !== rule.id || item.date < splitDate);
       savedFocusDate = splitDate;
     } else {
       const recurrenceDate = existing.recurrenceDate || originalDate;
+      updateLinkedContentColor(candidate, candidate.fallbackColor);
       state.recurrenceExceptions = upsertRecurrenceException(state.recurrenceExceptions, rule, recurrenceDate, {
         ...candidate,
         movedToDate: targetDate === recurrenceDate ? null : targetDate,
@@ -864,6 +953,10 @@ function saveBlock(event) {
     }
   } else {
     const id = existing?.id || `block-${Date.now()}`;
+    if (!existing) {
+      const content = addOneTimeContent({ ...candidate, color: candidate.fallbackColor });
+      candidate.contentId = content.id;
+    } else updateLinkedContentColor(candidate, candidate.fallbackColor);
     if (existing) setManualBlocksForDate(originalDate, manualBlocksForDate(originalDate).filter((block) => block.id !== id));
     setManualBlocksForDate(targetDate, [...manualBlocksForDate(targetDate), { ...candidate, id }]);
   }
@@ -916,7 +1009,7 @@ function openRuleDialog(ruleId = null) {
   elements.ruleEndDate.value = rule?.endDate || "";
   elements.deleteRuleButton.hidden = !rule;
   buildDayOptions(rule?.days);
-  setColorChoice(elements.ruleForm, "ruleColor", elements.ruleCustomColor, rule?.color, "sage");
+  setColorChoice(elements.ruleForm, "ruleColor", elements.ruleCustomColor, linkedContentColor(rule, state.eventContents, DEFAULT_RULE_COLOR), DEFAULT_RULE_COLOR);
   elements.ruleDialog.showModal();
   setTimeout(() => elements.ruleTitle.focus(), 40);
 }
@@ -951,6 +1044,7 @@ function saveRule(event) {
   const start = parseTime(elements.ruleStart.value);
   const duration = Number(elements.ruleDuration.value);
   const days = [...elements.ruleForm.querySelectorAll('[name="ruleDay"]:checked')].map((input) => Number(input.value));
+  const selectedColor = readColorChoice(elements.ruleForm, "ruleColor", elements.ruleCustomColor, DEFAULT_RULE_COLOR);
   const candidate = {
     ...existing,
     id: existing?.id || `rule-${Date.now()}`,
@@ -961,7 +1055,7 @@ function saveRule(event) {
     days,
     startDate: elements.ruleStartDate.value,
     endDate: elements.ruleEndDate.value || null,
-    color: readColorChoice(elements.ruleForm, "ruleColor", elements.ruleCustomColor, "sage"),
+    fallbackColor: selectedColor,
     enabled: existing?.enabled ?? true,
     inactiveRanges: existing?.inactiveRanges || [],
   };
@@ -969,6 +1063,12 @@ function saveRule(event) {
   if (validation.firstField) { showRuleErrors(validation); return; }
   if (state.rules.some((rule) => rule.id !== candidate.id && rule.enabled && candidate.enabled && rulesConflictInRange(candidate, rule))) { elements.ruleError.textContent = "这些日期的同一时段已有重复日程。"; return; }
   const previous = cloneState();
+  if (existing) updateLinkedContentColor(candidate, selectedColor);
+  else {
+    const content = addOneTimeContent({ ...candidate, color: selectedColor });
+    candidate.contentId = content.id;
+  }
+  delete candidate.color;
   state.rules = existing ? state.rules.map((rule) => rule.id === candidate.id ? candidate : rule) : [...state.rules, candidate];
   elements.ruleDialog.close();
   commitChange(previous, existing ? "重复日程已更新" : "重复日程已创建");
@@ -1057,6 +1157,7 @@ function deleteArchivedContent(id) {
   const content = state.eventContents.find((item) => item.id === id);
   if (!content || !window.confirm(`彻底删除“${content.title}”？已创建的时间块不会改变。`)) return;
   const previous = cloneState();
+  preserveDeletedContentFallback(content);
   state.eventContents = removeEventContent(state.eventContents, id);
   commitChange(previous, "归档内容已删除");
 }
@@ -1065,6 +1166,7 @@ function deleteLibraryContent() {
   const content = state.eventContents.find((item) => item.id === elements.libraryContentId.value);
   if (!content || !window.confirm(`删除“${content.title}”？已创建的时间块会保留原有名称和分类。`)) return;
   const previous = cloneState();
+  preserveDeletedContentFallback(content);
   state.eventContents = removeEventContent(state.eventContents, content.id);
   elements.libraryContentDialog.close();
   commitChange(previous, "常用内容已删除");
@@ -1272,7 +1374,15 @@ function createBlockFromContent(content, previousOverride = null) {
   const range = { ...activeSelection };
   if (hasConflict(range, blocksForDate(range.date))) { clearTimelineSelection(); showToast("这段时间已有安排，请重新划选"); return; }
   const previous = previousOverride || cloneState();
-  setManualBlocksForDate(range.date, [...manualBlocksForDate(range.date), { id: `block-${Date.now()}`, ...(content.id ? { contentId: content.id } : {}), title: content.title, category: content.category || null, start: range.start, end: range.end, color: content.color || "apricot" }]);
+  setManualBlocksForDate(range.date, [...manualBlocksForDate(range.date), {
+    id: `block-${Date.now()}`,
+    contentId: content.id,
+    fallbackColor: safeColor(content.color, DEFAULT_CONTENT_COLOR),
+    title: content.title,
+    category: content.category || null,
+    start: range.start,
+    end: range.end,
+  }]);
   clearTimelineSelection();
   commitChange(previous, `${displayScheduleTime(range.start)}—${displayScheduleTime(range.end)} 已安排`);
 }
@@ -1291,11 +1401,12 @@ function saveEventContent(event) {
     ? colorForEventContent(state.eventContents, category, COLORS)
     : readColorChoice(elements.contentForm, "contentColor", elements.contentCustomColor);
   const draft = { title, category, color };
-  if (!elements.contentFavorite.checked) {
-    createBlockFromContent(draft, previous);
-    return;
-  }
-  const result = upsertEventContent(state.eventContents, { ...draft, id: `content-${Date.now()}`, status: "favorite", sortOrder: state.eventContents.length });
+  const result = upsertEventContent(state.eventContents, {
+    ...draft,
+    id: `content-${Date.now()}`,
+    status: elements.contentFavorite.checked ? "favorite" : "oneTime",
+    sortOrder: state.eventContents.length,
+  });
   if (!result) return;
   state.eventContents = result.contents;
   createBlockFromContent(result.content, previous);
@@ -1476,7 +1587,7 @@ function clearGroupDragPreview() {
 function createGroupDragPreview(candidate, segment, invalid) {
   const preview = document.createElement("div");
   preview.className = `time-block group-drag-preview${segment ? " hour-segment" : ""}${segment?.first ? " segment-first" : ""}${segment?.last ? " segment-last" : ""}${invalid ? " invalid" : ""}`;
-  preview.style.cssText += colorStyle(candidate.block.color);
+  preview.style.cssText += colorStyle(candidate.block);
   if (!segment || segment.first) preview.innerHTML = `<strong class="block-title">${escapeHtml(candidate.block.title)}</strong>`;
   return preview;
 }
@@ -1770,7 +1881,7 @@ elements.snapSetting.addEventListener("change", () => { state.settings.snapMinut
 elements.accentOptions.addEventListener("click", (event) => {
   const button = event.target.closest("[data-accent-color]");
   if (!button) return;
-  state.settings.accentColor = safeColor(button.dataset.accentColor, "#a8d2cc");
+  state.settings.accentColor = safeColor(button.dataset.accentColor, DEFAULT_ACCENT_COLOR);
   saveState(); renderAll(); showToast("界面强调色已更新");
 });
 for (const [input, name, form] of [[elements.contentCustomColor, "contentColor", elements.contentForm], [elements.blockCustomColor, "blockColor", elements.blockForm], [elements.ruleCustomColor, "ruleColor", elements.ruleForm], [elements.libraryContentCustomColor, "libraryContentColor", elements.libraryContentForm]]) {

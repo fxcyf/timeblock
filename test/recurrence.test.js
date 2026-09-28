@@ -17,7 +17,8 @@ const rule = {
   days: [2, 4],
   startDate: "2026-08-01",
   endDate: null,
-  color: "sage",
+  contentId: "content-workout",
+  fallbackColor: "sage",
   enabled: true,
   inactiveRanges: [],
 };
@@ -39,7 +40,13 @@ test("stores one-date edits and cancellation as exceptions without completion st
   let [instance] = materializeRecurringForDate([rule], exceptions, "2026-08-25");
   assert.equal(instance.title, "晚一点训练");
   assert.equal(instance.start, 1260);
+  assert.equal(instance.contentId, "content-workout");
+  assert.equal(instance.fallbackColor, "sage");
+  assert.equal(Object.hasOwn(instance, "color"), false);
   assert.equal(Object.hasOwn(exceptions[0], "done"), false);
+  assert.equal(exceptions[0].contentId, "content-workout");
+  assert.equal(exceptions[0].fallbackColor, "sage");
+  assert.equal(Object.hasOwn(exceptions[0], "color"), false);
   assert.equal(Object.hasOwn(instance, "done"), false);
 
   exceptions = upsertRecurrenceException(exceptions, rule, "2026-08-25", { cancelled: true });

@@ -42,7 +42,11 @@ test("color customization uses labeled grids instead of native sliders", () => {
   assert.match(app, /selectedContentColor === "auto"/);
   assert.match(app, /readColorChoice\(elements\.contentForm, "contentColor", elements\.contentCustomColor\)/);
   assert.match(app, /CUSTOM_COLOR_CHOICES/);
+  assert.match(app, /--grid-surface:\$\{tokens\.surface\}/);
+  assert.match(app, /--grid-border:\$\{tokens\.border\}/);
+  assert.match(app, />Aa<\/button>/);
   assert.match(css, /\.custom-color-grid \{[^}]*display: grid;[^}]*grid-template-columns: repeat\(6, 38px\);/);
+  assert.match(css, /\.grid-color-button \{[^}]*background: var\(--grid-surface\);/);
   assert.match(css, /@media \(max-width: 360px\) \{\s*\.custom-color-grid \{ grid-template-columns: repeat\(5, 38px\);/);
   assert.match(css, /\.color-options \{[^}]*flex-wrap: wrap;/);
 });
