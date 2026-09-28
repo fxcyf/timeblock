@@ -161,6 +161,18 @@
       <form class="content-form" id="contentForm" hidden>
         <label class="picker-field"><span>名称</span><input id="contentTitle" maxlength="40" autocomplete="off" required /></label>
         <label class="picker-field"><span>分类（可选）</span><input id="contentCategory" list="categoryOptions" maxlength="20" autocomplete="off" /></label>
+        <fieldset class="color-field content-color-field"><legend>颜色</legend><div class="color-options">
+          <label><input type="radio" name="contentColor" value="auto" aria-label="自动配色" checked /><span class="auto-color-swatch">自动</span></label>
+          <label><input type="radio" name="contentColor" value="apricot" aria-label="杏色" /><span class="apricot"></span></label>
+          <label><input type="radio" name="contentColor" value="sage" aria-label="鼠尾草绿" /><span class="sage"></span></label>
+          <label><input type="radio" name="contentColor" value="blue" aria-label="灰蓝" /><span class="blue"></span></label>
+          <label><input type="radio" name="contentColor" value="lilac" aria-label="丁香紫" /><span class="lilac"></span></label>
+          <label><input type="radio" name="contentColor" value="rose" aria-label="玫瑰" /><span class="rose"></span></label>
+          <label><input type="radio" name="contentColor" value="sand" aria-label="沙色" /><span class="sand"></span></label>
+          <label><input type="radio" name="contentColor" value="teal" aria-label="青色" /><span class="teal"></span></label>
+          <label><input type="radio" name="contentColor" value="plum" aria-label="梅紫" /><span class="plum"></span></label>
+          <label class="custom-color-option"><input type="radio" name="contentColor" value="custom" /><input id="contentCustomColor" type="color" value="#b96d4e" aria-label="自定义内容颜色" /></label>
+        </div></fieldset>
         <label class="favorite-choice"><input id="contentFavorite" type="checkbox" /><span>保存为常用内容</span></label>
         <div class="dialog-error" id="contentError" role="alert"></div>
         <div class="content-form-actions"><button type="button" class="secondary-button" id="cancelContentButton">返回</button><button type="submit" class="primary-button">创建</button></div>

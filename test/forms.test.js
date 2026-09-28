@@ -31,6 +31,20 @@ test("time-block dialog close and cancel controls are also non-submitting", () =
   }
 });
 
+test("new event content supports automatic, preset, and custom colors", () => {
+  assert.match(html, /name="contentColor" value="auto"[^>]*checked/);
+  assert.match(html, /name="contentColor" value="apricot"/);
+  assert.match(html, /id="contentCustomColor" type="color"/);
+  assert.match(app, /selectedContentColor === "auto"/);
+  assert.match(app, /readColorChoice\(elements\.contentForm, "contentColor", elements\.contentCustomColor\)/);
+  assert.match(css, /\.custom-color-option > input\[type="color"\] \{[^}]*position: static;[^}]*opacity: 1;/);
+});
+
+test("event content names open their settings without requiring the arrow", () => {
+  assert.match(app, /class="content-library-open" data-edit-event-content=/);
+  assert.match(css, /\.content-library-open \{[^}]*cursor: pointer;/);
+});
+
 test("validates repeat drafts only on explicit save", () => {
   const empty = validateRuleDraft({ title: "", start: null, duration: 0, days: [], startDate: "", endDate: null });
   assert.equal(empty.firstField, "ruleTitle");
