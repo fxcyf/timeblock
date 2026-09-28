@@ -4,6 +4,16 @@ import { readFileSync } from "node:fs";
 
 const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const css = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
+const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
+
+test("separates the neutral interface canvas from accent and event colors", () => {
+  assert.match(html, /<meta name="theme-color" content="#f2f4f3" \/>/);
+  assert.match(html, />界面强调色</);
+  assert.match(css, /--canvas: #f2f4f3;/);
+  assert.match(css, /\.time-block \{[^}]*background: var\(--block-surface\);/);
+  assert.match(app, /eventColorTokens/);
+  assert.doesNotMatch(app, /setAttribute\("content", tokens\.soft\)/);
+});
 
 test("keeps mobile chrome inside iPadOS safe areas", () => {
   assert.match(html, /width=device-width, initial-scale=1\.0, viewport-fit=cover/);

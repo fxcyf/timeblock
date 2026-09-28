@@ -29,7 +29,7 @@ import { migrateAppState } from "./src/state.js";
 import { validateRuleDraft } from "./src/forms.js";
 import { gridCellAtPoint, gridSelectionRange, splitBlockIntoHourSegments } from "./src/grid.js";
 import { planGroupTransform, selectedDuration, targetForGroupDrag } from "./src/group.js";
-import { COLOR_PRESETS, colorTokens, normalizeColorValue, resolveColor } from "./src/theme.js";
+import { accentColorTokens, COLOR_PRESETS, eventColorTokens, normalizeColorValue, resolveColor } from "./src/theme.js";
 import {
   materializeRecurringForDate,
   rulesConflictInRange,
@@ -160,9 +160,9 @@ function safeColor(color, fallback = "apricot") {
   return normalizeColorValue(color, fallback);
 }
 
-function colorStyle(color, prefix = "block") {
-  const tokens = colorTokens(resolveColor(color, "apricot"));
-  return `--${prefix}-color:${tokens.soft};--${prefix}-deep:${tokens.deep}`;
+function colorStyle(color) {
+  const tokens = eventColorTokens(color);
+  return `--block-surface:${tokens.surface};--block-border:${tokens.border};--block-marker:${tokens.marker};--block-text:${tokens.text}`;
 }
 
 function setColorChoice(form, name, customInput, color, fallback = "apricot") {
@@ -179,14 +179,13 @@ function readColorChoice(form, name, customInput, fallback = "apricot") {
 }
 
 function applyTheme() {
-  const tokens = colorTokens(state.settings.accentColor);
+  const tokens = accentColorTokens(state.settings.accentColor);
   const root = document.documentElement.style;
   root.setProperty("--accent", tokens.accent);
   root.setProperty("--on-accent", tokens.onAccent);
   root.setProperty("--accent-soft", tokens.soft);
-  root.setProperty("--accent-dark", tokens.deep);
+  root.setProperty("--accent-strong", tokens.strong);
   root.setProperty("--focus-ring", tokens.focus);
-  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", tokens.soft);
 }
 
 function usesHourGrid() {
@@ -584,21 +583,21 @@ function renderEventContents() {
   const favorites = favoriteEventContents(state.eventContents);
   const archived = archivedEventContents(state.eventContents);
   elements.categoryOptions.innerHTML = eventContentCategories(state.eventContents).map((category) => `<option value="${escapeHtml(category)}"></option>`).join("");
-  elements.actionOptions.innerHTML = favorites.length ? favorites.map((content) => `<button type="button" data-event-content-id="${escapeHtml(content.id)}" style="--action-color:${colorTokens(resolveColor(content.color)).deep}"><span class="action-dot"></span><span class="action-copy"><strong>${escapeHtml(content.title)}</strong>${content.category ? `<small>${escapeHtml(content.category)}</small>` : ""}</span><svg><use href="#icon-arrow"></use></svg></button>`).join("") : '<p class="empty-content">还没有常用内容</p>';
-  elements.eventContentLibrary.innerHTML = favorites.length ? favorites.map((content, index) => `<div class="content-library-item"><i style="--content-color:${colorTokens(resolveColor(content.color)).deep}" aria-hidden="true"></i><span class="content-library-copy"><strong>${escapeHtml(content.title)}</strong><small>${escapeHtml(content.category || "未分类")}</small></span><span class="order-actions"><button type="button" data-move-content="${escapeHtml(content.id)}" data-direction="-1" aria-label="上移${escapeHtml(content.title)}" ${index === 0 ? "disabled" : ""}><svg><use href="#icon-up"></use></svg></button><button type="button" data-move-content="${escapeHtml(content.id)}" data-direction="1" aria-label="下移${escapeHtml(content.title)}" ${index === favorites.length - 1 ? "disabled" : ""}><svg><use href="#icon-down"></use></svg></button></span><button type="button" class="edit-content-button" data-edit-event-content="${escapeHtml(content.id)}" aria-label="编辑${escapeHtml(content.title)}"><svg><use href="#icon-chevron"></use></svg></button></div>`).join("") : '<p class="empty-state">还没有常用内容。添加后，划选时间时就能直接使用。</p>';
-  elements.archivedEventContentLibrary.innerHTML = archived.length ? archived.map((content) => `<div class="content-library-item archived-item"><i style="--content-color:${colorTokens(resolveColor(content.color)).deep}" aria-hidden="true"></i><span class="content-library-copy"><strong>${escapeHtml(content.title)}</strong><small>${escapeHtml(content.category || "未分类")}</small></span><span class="archived-actions"><button type="button" class="secondary-button" data-restore-content="${escapeHtml(content.id)}">恢复</button><button type="button" class="danger-button icon-button" data-delete-archived-content="${escapeHtml(content.id)}" aria-label="彻底删除${escapeHtml(content.title)}"><svg><use href="#icon-trash"></use></svg></button></span></div>`).join("") : '<p class="empty-state compact-empty">暂无归档内容</p>';
+  elements.actionOptions.innerHTML = favorites.length ? favorites.map((content) => `<button type="button" data-event-content-id="${escapeHtml(content.id)}" style="--action-color:${eventColorTokens(content.color).marker}"><span class="action-dot"></span><span class="action-copy"><strong>${escapeHtml(content.title)}</strong>${content.category ? `<small>${escapeHtml(content.category)}</small>` : ""}</span><svg><use href="#icon-arrow"></use></svg></button>`).join("") : '<p class="empty-content">还没有常用内容</p>';
+  elements.eventContentLibrary.innerHTML = favorites.length ? favorites.map((content, index) => `<div class="content-library-item"><i style="--content-color:${eventColorTokens(content.color).marker}" aria-hidden="true"></i><span class="content-library-copy"><strong>${escapeHtml(content.title)}</strong><small>${escapeHtml(content.category || "未分类")}</small></span><span class="order-actions"><button type="button" data-move-content="${escapeHtml(content.id)}" data-direction="-1" aria-label="上移${escapeHtml(content.title)}" ${index === 0 ? "disabled" : ""}><svg><use href="#icon-up"></use></svg></button><button type="button" data-move-content="${escapeHtml(content.id)}" data-direction="1" aria-label="下移${escapeHtml(content.title)}" ${index === favorites.length - 1 ? "disabled" : ""}><svg><use href="#icon-down"></use></svg></button></span><button type="button" class="edit-content-button" data-edit-event-content="${escapeHtml(content.id)}" aria-label="编辑${escapeHtml(content.title)}"><svg><use href="#icon-chevron"></use></svg></button></div>`).join("") : '<p class="empty-state">还没有常用内容。添加后，划选时间时就能直接使用。</p>';
+  elements.archivedEventContentLibrary.innerHTML = archived.length ? archived.map((content) => `<div class="content-library-item archived-item"><i style="--content-color:${eventColorTokens(content.color).marker}" aria-hidden="true"></i><span class="content-library-copy"><strong>${escapeHtml(content.title)}</strong><small>${escapeHtml(content.category || "未分类")}</small></span><span class="archived-actions"><button type="button" class="secondary-button" data-restore-content="${escapeHtml(content.id)}">恢复</button><button type="button" class="danger-button icon-button" data-delete-archived-content="${escapeHtml(content.id)}" aria-label="彻底删除${escapeHtml(content.title)}"><svg><use href="#icon-trash"></use></svg></button></span></div>`).join("") : '<p class="empty-state compact-empty">暂无归档内容</p>';
 }
 
 function renderWeekStrip() {
   elements.weekStrip.innerHTML = buildVisibleDateKeys(todayDateKey, 7).map((dateKey) => {
     const parts = dateParts(dateKey);
     const instances = recurringBlocksForDate(dateKey);
-    return `<div class="week-day${dateKey === todayDateKey ? " today" : ""}"><span>${FULL_DAY_NAMES[parts.weekday]}</span><strong>${parts.day}</strong><div class="week-marks">${instances.map((block) => `<i style="--mark-color:${colorTokens(resolveColor(block.color)).deep}"></i>`).join("")}</div></div>`;
+    return `<div class="week-day${dateKey === todayDateKey ? " today" : ""}"><span>${FULL_DAY_NAMES[parts.weekday]}</span><strong>${parts.day}</strong><div class="week-marks">${instances.map((block) => `<i style="--mark-color:${eventColorTokens(block.color).marker}"></i>`).join("")}</div></div>`;
   }).join("");
 }
 
 function renderRuleList() {
-  elements.ruleList.innerHTML = state.rules.length ? state.rules.map((rule) => `<article class="rule-card${rule.enabled ? "" : " disabled"}" style="--rule-color:${colorTokens(resolveColor(rule.color, "sage")).deep}"><span class="rule-color"></span><div class="rule-main"><strong>${escapeHtml(rule.title)}</strong><span class="rule-meta">${formatTime(rule.start)} · ${formatDuration(rule.duration)}${rule.endDate ? ` · 至 ${escapeHtml(rule.endDate)}` : ""}</span></div><div class="day-chips" aria-label="重复日期">${DAY_ORDER.map((day) => `<span class="${rule.days.includes(day) ? "on" : ""}">${DAY_NAMES[day]}</span>`).join("")}</div><div class="rule-actions"><button type="button" class="rule-edit" data-edit-rule="${escapeHtml(rule.id)}">编辑</button><label class="switch" aria-label="${rule.enabled ? "暂停" : "启用"}${escapeHtml(rule.title)}"><input type="checkbox" data-toggle-rule="${escapeHtml(rule.id)}" ${rule.enabled ? "checked" : ""} /><span></span></label></div></article>`).join("") : '<p class="empty-state">还没有重复日程。创建后，它会按规则动态出现在时间轴上。</p>';
+  elements.ruleList.innerHTML = state.rules.length ? state.rules.map((rule) => `<article class="rule-card${rule.enabled ? "" : " disabled"}" style="--rule-color:${eventColorTokens(rule.color).marker}"><span class="rule-color"></span><div class="rule-main"><strong>${escapeHtml(rule.title)}</strong><span class="rule-meta">${formatTime(rule.start)} · ${formatDuration(rule.duration)}${rule.endDate ? ` · 至 ${escapeHtml(rule.endDate)}` : ""}</span></div><div class="day-chips" aria-label="重复日期">${DAY_ORDER.map((day) => `<span class="${rule.days.includes(day) ? "on" : ""}">${DAY_NAMES[day]}</span>`).join("")}</div><div class="rule-actions"><button type="button" class="rule-edit" data-edit-rule="${escapeHtml(rule.id)}">编辑</button><label class="switch" aria-label="${rule.enabled ? "暂停" : "启用"}${escapeHtml(rule.title)}"><input type="checkbox" data-toggle-rule="${escapeHtml(rule.id)}" ${rule.enabled ? "checked" : ""} /><span></span></label></div></article>`).join("") : '<p class="empty-state">还没有重复日程。创建后，它会按规则动态出现在时间轴上。</p>';
 }
 
 function renderManagement() {
@@ -1655,13 +1654,13 @@ elements.accentOptions.addEventListener("click", (event) => {
   const button = event.target.closest("[data-accent-color]");
   if (!button) return;
   state.settings.accentColor = safeColor(button.dataset.accentColor, "#486f65");
-  saveState(); renderAll(); showToast("强调色已更新");
+  saveState(); renderAll(); showToast("界面强调色已更新");
 });
 elements.accentCustomColor.addEventListener("input", () => {
   state.settings.accentColor = safeColor(elements.accentCustomColor.value, "#486f65");
   applyTheme();
 });
-elements.accentCustomColor.addEventListener("change", () => { saveState(); renderAll(); showToast("自定义强调色已保存"); });
+elements.accentCustomColor.addEventListener("change", () => { saveState(); renderAll(); showToast("自定义界面强调色已保存"); });
 for (const [input, name, form] of [[elements.blockCustomColor, "blockColor", elements.blockForm], [elements.ruleCustomColor, "ruleColor", elements.ruleForm], [elements.libraryContentCustomColor, "libraryContentColor", elements.libraryContentForm]]) {
   input.addEventListener("input", () => { const radio = form.querySelector(`[name="${name}"][value="custom"]`); if (radio) radio.checked = true; });
 }
