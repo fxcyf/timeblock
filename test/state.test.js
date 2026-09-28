@@ -54,5 +54,5 @@ test("preserves safe custom colors and falls back from invalid imported settings
   assert.equal(migrated.rules[0].color, "#345f58");
   assert.equal(migrated.eventContents[0].color, "#a17c62");
   assert.equal(migrated.blocksByDate["2026-08-30"][0].color, "apricot");
-  assert.equal(migrated.settings.accentColor, "#486f65");
+  assert.equal(migrated.settings.accentColor, "#a8d2cc");
 });

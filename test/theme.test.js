@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   COLOR_PRESETS,
+  CUSTOM_COLOR_CHOICES,
   accentColorTokens,
   contrastRatio,
   eventColorTokens,
@@ -13,7 +14,16 @@ import {
 test("normalizes custom colors and falls back from unsafe values", () => {
   assert.equal(normalizeColorValue("#A1B2C3"), "#a1b2c3");
   assert.equal(normalizeColorValue("url(javascript:bad)", "#b96d4e"), "#b96d4e");
-  assert.equal(resolveColor("sage"), "#6f8b73");
+  assert.equal(resolveColor("sage"), "#b9d3b0");
+});
+
+test("keeps the built-in event palette light and pastel", () => {
+  const colors = [...Object.values(COLOR_PRESETS), ...CUSTOM_COLOR_CHOICES.map(({ value }) => value)];
+  assert.equal(CUSTOM_COLOR_CHOICES.length, 18);
+  for (const color of colors) {
+    assert.ok(contrastRatio(color, "#ffffff") <= 2.1, `${color} should stay light against white`);
+    assert.ok(contrastRatio(color, "#ffffff") >= 1.25, `${color} should remain visible against white`);
+  }
 });
 
 test("builds readable theme tokens for light and dark accents", () => {

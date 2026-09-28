@@ -142,7 +142,7 @@ function normalizeV2State(state) {
     settings: {
       viewDayCount: [1, 3, 7].includes(viewDayCount) ? viewDayCount : 1,
       snapMinutes: [5, 15, 30].includes(snapMinutes) ? snapMinutes : 15,
-      accentColor: paletteColor(state.settings?.accentColor, "#486f65"),
+      accentColor: paletteColor(state.settings?.accentColor, "#a8d2cc"),
     },
     rules: state.rules.map((rule) => normalizeRule(rule)),
     recurrenceExceptions: state.recurrenceExceptions.map(normalizeException),

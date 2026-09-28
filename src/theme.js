@@ -1,13 +1,19 @@
 export const COLOR_PRESETS = Object.freeze({
-  apricot: "#b96f4c",
-  sage: "#6f8b73",
-  blue: "#6683a3",
-  lilac: "#816f99",
-  rose: "#a46f79",
-  sand: "#8e7c59",
-  teal: "#568783",
-  plum: "#856c7d",
+  apricot: "#f2b7a4",
+  sage: "#b9d3b0",
+  blue: "#abc8e7",
+  lilac: "#c7b6e1",
+  rose: "#e5b3be",
+  sand: "#ccbfad",
+  teal: "#9ed4cb",
+  plum: "#d1b5ca",
 });
+
+export const CUSTOM_COLOR_CHOICES = Object.freeze([
+  ["#efaaa8", "雾红"], ["#f2b7a4", "蜜桃"], ["#f4c18b", "杏橙"], ["#efd38f", "奶油黄"], ["#d9d79d", "柔橄榄"], ["#bdd8a7", "嫩绿"],
+  ["#a8d6b9", "薄荷"], ["#9ed4cb", "海盐"], ["#a5d4dc", "水蓝"], ["#abc8e7", "天空蓝"], ["#b7c0e5", "长春花"], ["#c7b6e1", "薰衣草"],
+  ["#d6b4df", "丁香紫"], ["#e2b2cf", "樱花粉"], ["#e5b3be", "玫瑰粉"], ["#d7b7a9", "陶粉"], ["#ccbfad", "燕麦"], ["#c3cac7", "云灰"],
+].map(([value, label]) => Object.freeze({ value, label })));
 
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 const INTERFACE_INK = "#1f2925";
@@ -64,7 +70,7 @@ function towardContrast(color, background, minimum, target = INTERFACE_INK) {
 }
 
 export function accentColorTokens(value) {
-  const accent = resolveColor(value, "#486f65");
+  const accent = resolveColor(value, "#a8d2cc");
   const solid = towardContrast(accent, WHITE, 3);
   const onAccent = contrastRatio(solid, WHITE) >= contrastRatio(solid, INTERFACE_INK) ? WHITE : INTERFACE_INK;
   return {

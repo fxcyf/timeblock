@@ -3,7 +3,7 @@ import { exceptionId } from "./recurrence.js";
 import { normalizeColorValue } from "./theme.js";
 
 export const APP_STATE_VERSION = 2;
-export const DEFAULT_SETTINGS = Object.freeze({ viewDayCount: 1, snapMinutes: 15, accentColor: "#486f65" });
+export const DEFAULT_SETTINGS = Object.freeze({ viewDayCount: 1, snapMinutes: 15, accentColor: "#a8d2cc" });
 
 function normalizeRule(rule) {
   return {
@@ -67,7 +67,7 @@ export function migrateAppState(saved, todayDateKey, defaults = {}) {
   };
   if (![1, 3, 7].includes(settings.viewDayCount)) settings.viewDayCount = 1;
   if (![5, 15, 30].includes(settings.snapMinutes)) settings.snapMinutes = 15;
-  settings.accentColor = normalizeColorValue(settings.accentColor, "#486f65");
+  settings.accentColor = normalizeColorValue(settings.accentColor, "#a8d2cc");
 
   for (const blocks of Object.values(blocksByDate)) {
     for (const block of blocks) block.color = normalizeColorValue(block.color, "apricot");

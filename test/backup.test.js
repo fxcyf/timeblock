@@ -59,7 +59,7 @@ test("imports a V2 backup with legacy favorite flags", () => {
   };
   const migrated = parseBackup(JSON.stringify({ format: "timeblock-backup", version: 2, state: legacyV2 }));
   assert.equal(migrated.eventContents[0].status, "favorite");
-  assert.equal(migrated.settings.accentColor, "#486f65");
+  assert.equal(migrated.settings.accentColor, "#a8d2cc");
 });
 
 test("accepts the original single-day localStorage shape", () => {
