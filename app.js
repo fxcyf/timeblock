@@ -26,7 +26,7 @@ import { createBackup, parseBackup } from "./src/backup.js";
 import { createSupabaseCloud, resolveSyncAction } from "./src/cloud.js";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./src/cloud-config.js";
 import { migrateAppState } from "./src/state.js";
-import { validateRuleDraft } from "./src/forms.js";
+import { resolveCategoryChoice, validateRuleDraft } from "./src/forms.js";
 import { gridCellAtPoint, gridSelectionRange, splitBlockIntoHourSegments } from "./src/grid.js";
 import { planGroupTransform, selectedDuration, targetForGroupDrag } from "./src/group.js";
 import { accentColorTokens, COLOR_PRESETS, eventColorTokens, normalizeColorValue, resolveColor } from "./src/theme.js";
@@ -94,7 +94,7 @@ let pendingCloudRecord = null;
 const cloud = createSupabaseCloud({ projectUrl: SUPABASE_URL, publishableKey: SUPABASE_PUBLISHABLE_KEY });
 
 const elements = Object.fromEntries([
-  "accentCustomColor", "accentOptions", "actionOptions", "actionPicker", "archiveLibraryContentButton", "archivedEventContentLibrary", "blockCategory", "blockCustomColor", "blockDate", "blockDialog", "blockDialogKicker", "blockDialogTitle", "blockEnd", "blockError", "blockForm", "blockId", "blockOriginalDate", "blockScopeField", "blockStart", "blockTitle", "cancelBlockButton", "cancelContentButton", "cancelGroupButton", "cancelLibraryContentButton", "cancelRuleButton", "cancelSelectionButton", "categoryOptions", "clearDataButton", "closeActionPicker", "closeBlockButton", "closeGroupButton", "closeLibraryContentButton", "closeRuleButton", "cloudAccount", "cloudAccountEmail", "cloudAuthForm", "cloudConflict", "cloudEmail", "cloudPassword", "cloudSignInButton", "cloudSignOutButton", "cloudSignUpButton", "cloudStatus", "cloudSyncButton", "cloudSyncStatus", "cloudUseLocalButton", "cloudUseRemoteButton", "contentCategory", "contentCustomColor", "contentError", "contentFavorite", "contentForm", "contentListView", "contentTitle", "copySelectionButton", "dataSummary", "dateEyebrow", "dayOptions", "defaultViewSetting", "deleteBlockButton", "deleteLibraryContentButton", "deleteRuleButton", "deleteSelectionButton", "eventContentLibrary", "exportDataButton", "groupDate", "groupDialog", "groupDialogTitle", "groupError", "groupForm", "groupMode", "groupStart", "importDataButton", "importDataFile", "libraryContentCategory", "libraryContentCustomColor", "libraryContentDialog", "libraryContentDialogTitle", "libraryContentError", "libraryContentForm", "libraryContentId", "libraryContentTitle", "manageView", "newContentButton", "newFavoriteButton", "newRuleButton", "nextRangeButton", "previousRangeButton", "recurringView", "ruleCategory", "ruleCustomColor", "ruleDialog", "ruleDialogTitle", "ruleDuration", "ruleEndDate", "ruleError", "ruleForm", "ruleId", "ruleList", "ruleStart", "ruleStartDate", "ruleTitle", "scheduleSyncButton", "selectedRange", "selectionCount", "selectionModeButton", "selectionToolbar", "shift15Button", "shift30Button", "snapSetting", "timeAxis", "timeline", "timelineDays", "timelineHeaders", "timelineScroll", "toast", "todayButton", "todayView", "topbar", "undoButton", "viewTitle", "weekStrip",
+  "accentCustomColor", "accentOptions", "actionOptions", "actionPicker", "archiveLibraryContentButton", "archivedEventContentLibrary", "blockCategory", "blockCustomColor", "blockDate", "blockDialog", "blockDialogKicker", "blockDialogTitle", "blockEnd", "blockError", "blockForm", "blockId", "blockOriginalDate", "blockScopeField", "blockStart", "blockTitle", "cancelBlockButton", "cancelContentButton", "cancelGroupButton", "cancelLibraryContentButton", "cancelRuleButton", "cancelSelectionButton", "categoryOptions", "clearDataButton", "closeActionPicker", "closeBlockButton", "closeGroupButton", "closeLibraryContentButton", "closeRuleButton", "cloudAccount", "cloudAccountEmail", "cloudAuthForm", "cloudConflict", "cloudEmail", "cloudPassword", "cloudSignInButton", "cloudSignOutButton", "cloudSignUpButton", "cloudStatus", "cloudSyncButton", "cloudSyncStatus", "cloudUseLocalButton", "cloudUseRemoteButton", "contentCategory", "contentCustomColor", "contentError", "contentFavorite", "contentForm", "contentListView", "contentNewCategory", "contentNewCategoryField", "contentTitle", "copySelectionButton", "dataSummary", "dateEyebrow", "dayOptions", "defaultViewSetting", "deleteBlockButton", "deleteLibraryContentButton", "deleteRuleButton", "deleteSelectionButton", "eventContentLibrary", "exportDataButton", "groupDate", "groupDialog", "groupDialogTitle", "groupError", "groupForm", "groupMode", "groupStart", "importDataButton", "importDataFile", "libraryContentCategory", "libraryContentCustomColor", "libraryContentDialog", "libraryContentDialogTitle", "libraryContentError", "libraryContentForm", "libraryContentId", "libraryContentNewCategory", "libraryContentNewCategoryField", "libraryContentTitle", "manageView", "newContentButton", "newFavoriteButton", "newRuleButton", "nextRangeButton", "previousRangeButton", "recurringView", "ruleCategory", "ruleCustomColor", "ruleDialog", "ruleDialogTitle", "ruleDuration", "ruleEndDate", "ruleError", "ruleForm", "ruleId", "ruleList", "ruleStart", "ruleStartDate", "ruleTitle", "scheduleSyncButton", "selectedRange", "selectionCount", "selectionModeButton", "selectionToolbar", "shift15Button", "shift30Button", "snapSetting", "timeAxis", "timeline", "timelineDays", "timelineHeaders", "timelineScroll", "toast", "todayButton", "todayView", "topbar", "undoButton", "viewTitle", "weekStrip",
 ].map((id) => [id, document.querySelector(`#${id}`)]));
 
 function toDateKey(date) {
@@ -176,6 +176,47 @@ function setColorChoice(form, name, customInput, color, fallback = "apricot") {
 function readColorChoice(form, name, customInput, fallback = "apricot") {
   const value = form.querySelector(`[name="${name}"]:checked`)?.value;
   return value === "custom" ? safeColor(customInput?.value, fallback) : safeColor(value, fallback);
+}
+
+function newCategoryIsSelected(select) {
+  return select.selectedOptions[0]?.hasAttribute("data-new-category") || false;
+}
+
+function categorySelectMarkup(categories) {
+  return `<option value="">未分类</option>${categories.map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`).join("")}<option value="" data-new-category>新建分类…</option>`;
+}
+
+function populateCategorySelect(select, categories) {
+  const previousValue = select.value;
+  const previousWasNew = newCategoryIsSelected(select);
+  select.innerHTML = categorySelectMarkup(categories);
+  if (previousWasNew) select.querySelector("[data-new-category]").selected = true;
+  else if (categories.includes(previousValue)) select.value = previousValue;
+}
+
+function syncNewCategoryField(select, field, input, { focus = false, reposition = false } = {}) {
+  const show = newCategoryIsSelected(select);
+  field.hidden = !show;
+  input.disabled = !show;
+  if (!show) input.value = "";
+  if (show && focus) input.focus({ preventScroll: true });
+  if (reposition) positionActionPicker();
+}
+
+function setCategoryChoice(select, field, input, value) {
+  const category = resolveCategoryChoice(value, "", false);
+  const existing = [...select.options].find((option) => !option.hasAttribute("data-new-category") && option.value === category);
+  if (existing) existing.selected = true;
+  else if (category) {
+    select.querySelector("[data-new-category]").selected = true;
+    input.value = category;
+  } else select.selectedIndex = 0;
+  syncNewCategoryField(select, field, input);
+}
+
+function readCategoryChoice(select, input) {
+  const createNew = newCategoryIsSelected(select);
+  return { category: resolveCategoryChoice(select.value, input.value, createNew), createNew };
 }
 
 function applyTheme() {
@@ -582,7 +623,12 @@ function renderBlocks() {
 function renderEventContents() {
   const favorites = favoriteEventContents(state.eventContents);
   const archived = archivedEventContents(state.eventContents);
-  elements.categoryOptions.innerHTML = eventContentCategories(state.eventContents).map((category) => `<option value="${escapeHtml(category)}"></option>`).join("");
+  const categories = eventContentCategories(state.eventContents);
+  elements.categoryOptions.innerHTML = categories.map((category) => `<option value="${escapeHtml(category)}"></option>`).join("");
+  populateCategorySelect(elements.contentCategory, categories);
+  populateCategorySelect(elements.libraryContentCategory, categories);
+  syncNewCategoryField(elements.contentCategory, elements.contentNewCategoryField, elements.contentNewCategory);
+  syncNewCategoryField(elements.libraryContentCategory, elements.libraryContentNewCategoryField, elements.libraryContentNewCategory);
   elements.actionOptions.innerHTML = favorites.length ? favorites.map((content) => `<button type="button" data-event-content-id="${escapeHtml(content.id)}" style="--action-color:${eventColorTokens(content.color).marker}"><span class="action-dot"></span><span class="action-copy"><strong>${escapeHtml(content.title)}</strong>${content.category ? `<small>${escapeHtml(content.category)}</small>` : ""}</span><svg><use href="#icon-arrow"></use></svg></button>`).join("") : '<p class="empty-content">还没有常用内容</p>';
   elements.eventContentLibrary.innerHTML = favorites.length ? favorites.map((content, index) => `<div class="content-library-item"><button type="button" class="content-library-open" data-edit-event-content="${escapeHtml(content.id)}" aria-label="编辑${escapeHtml(content.title)}"><i style="--content-color:${eventColorTokens(content.color).marker}" aria-hidden="true"></i><span class="content-library-copy"><strong>${escapeHtml(content.title)}</strong><small>${escapeHtml(content.category || "未分类")}</small></span></button><span class="order-actions"><button type="button" data-move-content="${escapeHtml(content.id)}" data-direction="-1" aria-label="上移${escapeHtml(content.title)}" ${index === 0 ? "disabled" : ""}><svg><use href="#icon-up"></use></svg></button><button type="button" data-move-content="${escapeHtml(content.id)}" data-direction="1" aria-label="下移${escapeHtml(content.title)}" ${index === favorites.length - 1 ? "disabled" : ""}><svg><use href="#icon-down"></use></svg></button></span><button type="button" class="edit-content-button" data-edit-event-content="${escapeHtml(content.id)}" aria-label="编辑${escapeHtml(content.title)}"><svg><use href="#icon-chevron"></use></svg></button></div>`).join("") : '<p class="empty-state">还没有常用内容。添加后，划选时间时就能直接使用。</p>';
   elements.archivedEventContentLibrary.innerHTML = archived.length ? archived.map((content) => `<div class="content-library-item archived-item"><i style="--content-color:${eventColorTokens(content.color).marker}" aria-hidden="true"></i><span class="content-library-copy"><strong>${escapeHtml(content.title)}</strong><small>${escapeHtml(content.category || "未分类")}</small></span><span class="archived-actions"><button type="button" class="secondary-button" data-restore-content="${escapeHtml(content.id)}">恢复</button><button type="button" class="danger-button icon-button" data-delete-archived-content="${escapeHtml(content.id)}" aria-label="彻底删除${escapeHtml(content.title)}"><svg><use href="#icon-trash"></use></svg></button></span></div>`).join("") : '<p class="empty-state compact-empty">暂无归档内容</p>';
@@ -908,7 +954,7 @@ function openLibraryContentEditor(contentId = null) {
   elements.libraryContentId.value = content?.id || "";
   elements.libraryContentDialogTitle.textContent = content ? "编辑常用内容" : "添加常用内容";
   elements.libraryContentTitle.value = content?.title || "";
-  elements.libraryContentCategory.value = content?.category || "";
+  setCategoryChoice(elements.libraryContentCategory, elements.libraryContentNewCategoryField, elements.libraryContentNewCategory, content?.category);
   elements.deleteLibraryContentButton.hidden = !content;
   elements.archiveLibraryContentButton.hidden = !content;
   setColorChoice(elements.libraryContentForm, "libraryContentColor", elements.libraryContentCustomColor, content?.color);
@@ -919,8 +965,10 @@ function openLibraryContentEditor(contentId = null) {
 function saveLibraryContent(event) {
   event.preventDefault();
   const id = elements.libraryContentId.value;
-  const draft = { title: elements.libraryContentTitle.value, category: elements.libraryContentCategory.value, status: "favorite", color: readColorChoice(elements.libraryContentForm, "libraryContentColor", elements.libraryContentCustomColor) };
+  const categoryChoice = readCategoryChoice(elements.libraryContentCategory, elements.libraryContentNewCategory);
+  const draft = { title: elements.libraryContentTitle.value, category: categoryChoice.category, status: "favorite", color: readColorChoice(elements.libraryContentForm, "libraryContentColor", elements.libraryContentCustomColor) };
   if (!draft.title.trim()) { elements.libraryContentError.textContent = "请填写内容名称。"; return; }
+  if (categoryChoice.createNew && !draft.category) { elements.libraryContentError.textContent = "请填写新分类名称。"; elements.libraryContentNewCategory.focus(); return; }
   const previous = cloneState();
   if (id) {
     const result = updateEventContent(state.eventContents, id, draft);
@@ -1131,6 +1179,7 @@ function showContentList(focus = false) {
 function openContentForm() {
   elements.contentForm.reset();
   elements.contentError.textContent = "";
+  setCategoryChoice(elements.contentCategory, elements.contentNewCategoryField, elements.contentNewCategory, "");
   elements.contentListView.hidden = true;
   elements.contentForm.hidden = false;
   positionActionPicker();
@@ -1176,8 +1225,10 @@ function saveEventContent(event) {
   event.preventDefault();
   if (!activeSelection) return;
   const title = elements.contentTitle.value.trim();
-  const category = elements.contentCategory.value.trim();
   if (!title) { elements.contentError.textContent = "请填写内容名称。"; return; }
+  const categoryChoice = readCategoryChoice(elements.contentCategory, elements.contentNewCategory);
+  const category = categoryChoice.category;
+  if (categoryChoice.createNew && !category) { elements.contentError.textContent = "请填写新分类名称。"; elements.contentNewCategory.focus({ preventScroll: true }); return; }
   const previous = cloneState();
   const selectedContentColor = elements.contentForm.querySelector('[name="contentColor"]:checked')?.value;
   const color = selectedContentColor === "auto"
@@ -1623,6 +1674,7 @@ elements.todayButton.addEventListener("click", goToToday);
 elements.closeActionPicker.addEventListener("click", clearTimelineSelection);
 elements.newContentButton.addEventListener("click", openContentForm);
 elements.cancelContentButton.addEventListener("click", () => showContentList(true));
+elements.contentCategory.addEventListener("change", () => syncNewCategoryField(elements.contentCategory, elements.contentNewCategoryField, elements.contentNewCategory, { focus: true, reposition: true }));
 elements.newRuleButton.addEventListener("click", () => openRuleDialog());
 elements.ruleForm.addEventListener("submit", saveRule);
 elements.deleteRuleButton.addEventListener("click", deleteRule);
@@ -1637,6 +1689,7 @@ elements.blockDialog.addEventListener("cancel", () => { elements.blockError.text
 elements.contentForm.addEventListener("submit", saveEventContent);
 elements.newFavoriteButton.addEventListener("click", () => openLibraryContentEditor());
 elements.libraryContentForm.addEventListener("submit", saveLibraryContent);
+elements.libraryContentCategory.addEventListener("change", () => syncNewCategoryField(elements.libraryContentCategory, elements.libraryContentNewCategoryField, elements.libraryContentNewCategory, { focus: true }));
 elements.deleteLibraryContentButton.addEventListener("click", deleteLibraryContent);
 elements.archiveLibraryContentButton.addEventListener("click", archiveLibraryContent);
 elements.closeLibraryContentButton.addEventListener("click", () => elements.libraryContentDialog.close());

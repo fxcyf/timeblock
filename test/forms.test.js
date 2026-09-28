@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-import { validateRuleDraft } from "../src/forms.js";
+import { resolveCategoryChoice, validateRuleDraft } from "../src/forms.js";
 
 const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
@@ -38,6 +38,18 @@ test("new event content supports automatic, preset, and custom colors", () => {
   assert.match(app, /selectedContentColor === "auto"/);
   assert.match(app, /readColorChoice\(elements\.contentForm, "contentColor", elements\.contentCustomColor\)/);
   assert.match(css, /\.custom-color-option > input\[type="color"\] \{[^}]*position: static;[^}]*opacity: 1;/);
+});
+
+test("new event content offers existing categories and a new-category choice", () => {
+  assert.match(html, /<select id="contentCategory"/);
+  assert.match(html, /<select id="libraryContentCategory"/);
+  assert.match(html, /id="contentNewCategory"[^>]*maxlength="20"/);
+  assert.match(html, /id="libraryContentNewCategory"[^>]*maxlength="20"/);
+  assert.match(html, /data-new-category/);
+  assert.match(app, /elements\.contentCategory\.addEventListener\("change"/);
+  assert.match(app, /elements\.libraryContentCategory\.addEventListener\("change"/);
+  assert.equal(resolveCategoryChoice("健康", "", false), "健康");
+  assert.equal(resolveCategoryChoice("", "  新分类  ", true), "新分类");
 });
 
 test("event content names open their settings without requiring the arrow", () => {

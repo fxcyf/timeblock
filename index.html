@@ -160,7 +160,8 @@
       </div>
       <form class="content-form" id="contentForm" hidden>
         <label class="picker-field"><span>名称</span><input id="contentTitle" maxlength="40" autocomplete="off" required /></label>
-        <label class="picker-field"><span>分类（可选）</span><input id="contentCategory" list="categoryOptions" maxlength="20" autocomplete="off" /></label>
+        <label class="picker-field"><span>分类（可选）</span><select id="contentCategory" aria-controls="contentNewCategoryField"><option value="">未分类</option><option value="" data-new-category>新建分类…</option></select></label>
+        <label class="picker-field" id="contentNewCategoryField" hidden><span>新分类名称</span><input id="contentNewCategory" maxlength="20" autocomplete="off" disabled /></label>
         <fieldset class="color-field content-color-field"><legend>颜色</legend><div class="color-options">
           <label><input type="radio" name="contentColor" value="auto" aria-label="自动配色" checked /><span class="auto-color-swatch">自动</span></label>
           <label><input type="radio" name="contentColor" value="apricot" aria-label="杏色" /><span class="apricot"></span></label>
@@ -186,7 +187,8 @@
         <div class="dialog-heading"><div><span>常用内容</span><h2 id="libraryContentDialogTitle">编辑常用内容</h2></div><button type="button" class="close-button" id="closeLibraryContentButton" aria-label="关闭">×</button></div>
         <input type="hidden" id="libraryContentId" />
         <label class="field"><span>名称</span><input id="libraryContentTitle" required maxlength="40" autocomplete="off" /></label>
-        <label class="field"><span>分类（可选）</span><input id="libraryContentCategory" list="categoryOptions" maxlength="20" autocomplete="off" /></label>
+        <label class="field"><span>分类（可选）</span><select id="libraryContentCategory" aria-controls="libraryContentNewCategoryField"><option value="">未分类</option><option value="" data-new-category>新建分类…</option></select></label>
+        <label class="field" id="libraryContentNewCategoryField" hidden><span>新分类名称</span><input id="libraryContentNewCategory" maxlength="20" autocomplete="off" disabled /></label>
         <fieldset class="color-field"><legend>颜色</legend><div class="color-options">
           <label><input type="radio" name="libraryContentColor" value="apricot" checked /><span class="apricot"></span></label>
           <label><input type="radio" name="libraryContentColor" value="sage" /><span class="sage"></span></label>

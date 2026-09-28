@@ -221,7 +221,8 @@ svg { width: 1.25rem; height: 1.25rem; fill: none; stroke: currentColor; stroke-
 .content-form .color-options span, .content-form .custom-color-option > input[type="color"] { width: 34px; height: 34px; }
 .content-form .color-options .auto-color-swatch { display: grid; place-items: center; color: var(--muted); background: var(--surface-soft); font-size: .62rem; font-weight: 750; }
 .picker-field { display: grid; gap: 5px; color: var(--muted); font-size: .8125rem; font-weight: 650; }
-.picker-field input { width: 100%; min-height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: 9px; color: var(--ink); background: var(--surface); }
+.picker-field input, .picker-field select { width: 100%; min-height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: 9px; color: var(--ink); background: var(--surface); }
+.picker-field select, #libraryContentCategory { appearance: auto; }
 .content-form-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
 .sheet-dialog { width: min(540px, calc(100vw - 28px)); max-height: calc(100vh - 28px); padding: 0; overflow: auto; border: 1px solid var(--line); border-radius: 16px; color: var(--ink); background: var(--surface); box-shadow: 0 24px 70px rgba(30,34,30,.22); }
@@ -232,7 +233,7 @@ svg { width: 1.25rem; height: 1.25rem; fill: none; stroke: currentColor; stroke-
 .field { display: grid; gap: 6px; }
 .field > span, fieldset > legend { color: var(--muted); font-size: .8125rem; font-weight: 700; }
 .field input, .field select { width: 100%; min-height: 46px; padding: 0 12px; border: 1px solid var(--line); border-radius: 9px; color: var(--ink); background: var(--surface); }
-.field input:focus, .field select:focus, .picker-field input:focus { border-color: var(--accent); }
+.field input:focus, .field select:focus, .picker-field input:focus, .picker-field select:focus { border-color: var(--accent); }
 .field [aria-invalid="true"] { border-color: var(--danger); background: var(--danger-surface); }
 .field-error { min-height: 0; color: var(--danger); font-size: .78rem; }
 .field-error:empty { display: none; }

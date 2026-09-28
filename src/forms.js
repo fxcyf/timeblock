@@ -2,6 +2,10 @@ function cleanText(value) {
   return String(value ?? "").trim();
 }
 
+export function resolveCategoryChoice(selectedCategory, newCategory, createNew = false) {
+  return cleanText(createNew ? newCategory : selectedCategory).replace(/\s+/g, " ");
+}
+
 export function validateRuleDraft(draft) {
   const errors = {};
   if (!cleanText(draft?.title)) errors.ruleTitle = "请输入日程名称";
