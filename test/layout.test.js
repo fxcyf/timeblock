@@ -14,6 +14,7 @@ test("separates the neutral interface canvas from accent and event colors", () =
   assert.match(app, /STATIC_THEME_TOKENS/);
   assert.match(app, /applyStaticThemeTokens/);
   assert.match(css, /\.time-block \{[^}]*background: var\(--block-surface\);/);
+  assert.match(css, /\.time-block \{[^}]*border: 0;/);
   assert.match(app, /eventColorTokens/);
   assert.doesNotMatch(app, /setAttribute\("content", tokens\.soft\)/);
 });

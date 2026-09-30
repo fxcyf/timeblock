@@ -186,7 +186,7 @@ function safeColor(color, fallback = DEFAULT_CONTENT_COLOR) {
 
 function colorStyle(item) {
   const tokens = eventColorTokens(linkedContentColor(item, state.eventContents));
-  return `--block-surface:${tokens.surface};--block-border:${tokens.border};--block-marker:${tokens.marker};--block-text:${tokens.text}`;
+  return `--block-surface:${tokens.surface};--block-marker:${tokens.marker};--block-text:${tokens.text}`;
 }
 
 function swatchStyle(item, prefix) {
