@@ -133,7 +133,7 @@ function hueAwareText(base, background, minimum = 4.5) {
 
 export function eventColorTokens(value) {
   const base = resolveColor(value, DEFAULT_CONTENT_COLOR);
-  const surface = base;
+  const surface = mix(base, WHITE, 0.35);
   const text = hueAwareText(base, surface);
   return {
     base,

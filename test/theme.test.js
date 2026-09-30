@@ -56,11 +56,22 @@ test("derives a consistent and readable role set for every event color", () => {
   }
 });
 
-test("uses each pastel as its actual surface with a distinct hue-aware text color", () => {
+test("softens every pastel surface while preserving its base marker and hue-aware text", () => {
+  const expectedSurfaces = {
+    apricot: "#f7d0c4",
+    sage: "#d2e2cc",
+    blue: "#c8dbef",
+    lilac: "#dbd0ec",
+    rose: "#eeced5",
+    sand: "#ded5ca",
+    teal: "#c0e3dd",
+    plum: "#e1cfdd",
+  };
   const textColors = new Set();
   for (const [name, color] of Object.entries(COLOR_PRESETS)) {
     const tokens = eventColorTokens(name);
-    assert.equal(tokens.surface, color);
+    assert.equal(tokens.surface, expectedSurfaces[name]);
+    assert.ok(contrastRatio(tokens.surface, "#ffffff") < contrastRatio(color, "#ffffff"));
     assert.equal(tokens.marker, color);
     assert.notEqual(tokens.text, STATIC_THEME_TOKENS.text);
     assert.ok(contrastRatio(tokens.text, tokens.surface) >= 4.5);

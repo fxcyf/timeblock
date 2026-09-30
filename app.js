@@ -70,7 +70,7 @@ const COLORS = Object.keys(COLOR_PRESETS);
 function applyStaticThemeTokens() {
   const root = document.documentElement.style;
   for (const [name, value] of Object.entries(STATIC_THEME_TOKENS)) root.setProperty(`--${name}`, value);
-  for (const [name, value] of Object.entries(COLOR_PRESETS)) root.setProperty(`--${name}`, value);
+  for (const name of Object.keys(COLOR_PRESETS)) root.setProperty(`--${name}`, eventColorTokens(name).surface);
   document.querySelector('meta[name="theme-color"]')?.setAttribute("content", STATIC_THEME_TOKENS.canvas);
 }
 

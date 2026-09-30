@@ -42,6 +42,7 @@ test("color customization uses labeled grids instead of native sliders", () => {
   assert.match(app, /selectedContentColor === "auto"/);
   assert.match(app, /readColorChoice\(elements\.contentForm, "contentColor", elements\.contentCustomColor\)/);
   assert.match(app, /CUSTOM_COLOR_CHOICES/);
+  assert.match(app, /eventColorTokens\(name\)\.surface/);
   assert.match(app, /--grid-surface:\$\{tokens\.surface\}/);
   assert.match(app, /--grid-border:\$\{tokens\.border\}/);
   assert.doesNotMatch(app, />Aa</);
