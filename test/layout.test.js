@@ -16,6 +16,8 @@ test("separates the neutral interface canvas from accent and event colors", () =
   assert.match(css, /\.time-block \{[^}]*background: transparent;/);
   assert.match(css, /\.time-block \{[^}]*border: 0;/);
   assert.match(css, /\.time-block::before \{[^}]*inset: 1px;[^}]*background: var\(--block-surface\);/);
+  assert.match(css, /\.resize-handle \{[^}]*height: 18px;[^}]*touch-action: none;/);
+  assert.doesNotMatch(css, /\.timeline-view-7 \.resize-handle \{[^}]*display: none;/);
   assert.match(app, /eventColorTokens/);
   assert.doesNotMatch(app, /setAttribute\("content", tokens\.soft\)/);
 });

@@ -24,7 +24,7 @@ import {
   upsertEventContent,
 } from "./src/content.js";
 import { addDateKeyDays, dateFromKey, visibleDateKeys as buildVisibleDateKeys } from "./src/calendar.js";
-import { hasMovedBeyondTolerance } from "./src/gesture.js";
+import { blockPointerIntent, hasMovedBeyondTolerance } from "./src/gesture.js";
 import { createBackup, parseBackup } from "./src/backup.js";
 import { createSupabaseCloud, resolveSyncAction } from "./src/cloud.js";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./src/cloud-config.js";
@@ -1541,8 +1541,15 @@ function toggleBlockSelection(dateKey, id) {
 
 function startBlockPointerInteraction(event) {
   if (event.target.closest("button") || event.button !== 0) return;
-  if (selectionMode) { startGroupPointerDrag(event); return; }
-  if (event.pointerType !== "touch") { startPointerAdjustment(event); return; }
+  const intent = blockPointerIntent({
+    pointerType: event.pointerType,
+    isResizeHandle: Boolean(event.target.closest(".resize-handle")),
+    selectionMode,
+    hourGrid: usesHourGrid(),
+  });
+  if (intent === "group") { startGroupPointerDrag(event); return; }
+  if (intent === "adjust") { startPointerAdjustment(event); return; }
+  if (intent !== "longPress") return;
   const article = event.currentTarget;
   const origin = { x: event.clientX, y: event.clientY };
   const timer = setTimeout(() => {
@@ -1766,7 +1773,7 @@ function deleteSelection() {
 }
 
 function startPointerAdjustment(event) {
-  if (event.button !== 0 || event.target.closest("button") || viewDayCount === 7 || usesHourGrid() || selectionMode) return;
+  if (event.button !== 0 || event.target.closest("button") || usesHourGrid() || selectionMode) return;
   const article = event.currentTarget;
   const dateKey = article.dataset.date;
   const block = findBlock(dateKey, article.dataset.id);
