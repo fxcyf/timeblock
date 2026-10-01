@@ -1,7 +1,7 @@
 {
   "name": "Timeblock",
   "short_name": "Timeblock",
-  "description": "用时间块快速安排一天与重复日程。",
+  "description": "快速安排每天和重复日程，并在时间块开始或结束时提醒。",
   "lang": "zh-CN",
   "id": "./",
   "start_url": "./",

@@ -17,6 +17,7 @@
 - **批量调整**：进入“选择”模式后可多选时间块，并即时查看所选项目的总时长；可直接拖动任意已选项来重新安排整组，也可统一后移 15/30 分钟、复制或删除；任一目标冲突或越界时整组回到原位，移动和删除均可撤销。
 - **跨日安排**：每个日期独立保存时间块，编辑时可以把安排移动到另一日。
 - **动态重复日程**：规则按星期和生效日期动态生成实例，可编辑、暂停和删除；单个实例支持“仅这一次”和“这一次及以后”，移动单次实例仍保留规则归属。
+- **开始/结束通知**：登录后可按设备选择在时间块开始、结束或两者都提醒；macOS 浏览器可直接授权，iOS/iPadOS 16.4 及以上需先用 Safari 添加到主屏幕。
 - **快速恢复**：删除、移动、规则与常用内容修改后可立即撤销一次。
 - **柔性提醒**：冲突时不覆盖原安排，排得太满时提示给切换和休息留时间。
 - **本地优先与可选云同步**：V2 数据始终先保存在浏览器 `localStorage`，无需登录即可使用；登录后通过 Supabase 自动同步到其他设备，也可在日程页点同步按钮立即拉取，离线修改会在恢复网络后上传，双端同时修改时由用户明确选择版本。
@@ -40,7 +41,7 @@ npm start
 
 ## 部署
 
-仓库使用 GitHub Pages 自动部署。推送到 `main` 后，`.github/workflows/static.yml` 会发布当前静态站点，无需自建服务器或手动上传文件。
+仓库使用 GitHub Pages 自动部署。推送到 `main` 后，`.github/workflows/static.yml` 会发布静态前端，无需自建常驻服务器或手动上传文件；可选的通知能力使用 Supabase Edge Functions 和 Cron。
 
 首次部署需要在仓库 Settings → Pages 中将 Source 设为 **GitHub Actions**；后续更新均由工作流自动完成。
 
@@ -48,7 +49,7 @@ npm start
 
 前端只包含可公开的 Project URL 与 Publishable key。首次启用云同步前还需要：
 
-1. 在 Supabase Dashboard → SQL Editor 执行 `supabase/schema.sql`，创建 `timeblock_states` 并启用按用户隔离的 RLS。
+1. 在 Supabase Dashboard → SQL Editor 执行 `supabase/schema.sql`，创建云状态和通知订阅表，并启用按用户隔离的 RLS。
 2. 在 Authentication → URL Configuration 将 Site URL 设为 `https://fxcyf.github.io/timeblock/`，并把该地址及本地开发地址 `http://localhost:4173/` 加入 Redirect URLs。
 3. 确认 Email 登录已启用。若开启邮箱确认，新用户需先点击验证邮件再登录。
 
@@ -56,13 +57,19 @@ npm start
 
 Publishable key 出现在浏览器和仓库中是正常的；不要把 `sb_secret_...`、`service_role` 或数据库密码写入前端。数据访问由登录令牌和 `supabase/schema.sql` 中的 RLS 共同限制。
 
+### 系统通知初始化
+
+通知还需要部署 `push-subscriptions`、`send-reminders` 两个 Edge Functions，配置 VAPID 密钥，并创建每分钟 Cron。完整命令见 `supabase/NOTIFICATIONS.md`。VAPID 私钥、Service Role key 和 Cron 密钥仅存在于 Supabase 服务端；设备订阅与开始/结束偏好不进入 V2 状态或 JSON 备份。
+
+推送依赖设备联网和系统调度，可能有短暂延迟。定时函数会回看最近三分钟，并通过 `push_deliveries` 去重；这适合日程提醒，但不承诺秒级闹钟精度。
+
 ## 测试
 
 ```bash
 npm test
 ```
 
-自动化测试覆盖内容三态迁移、主题颜色、小时格坐标、整组移动/复制、iPadOS 安全区、全天边界、日期范围、重复例外和 JSON 备份兼容。手动验收步骤见 `TEST.md`。
+自动化测试覆盖内容三态迁移、主题颜色、小时格坐标、整组移动/复制、iPadOS 安全区、全天边界、日期范围、重复例外、推送订阅、提醒计算和 JSON 备份兼容。手动验收步骤见 `TEST.md`。
 
 ## 项目结构
 
@@ -83,9 +90,14 @@ src/group.js           多选复制、直接拖动与整体移动的原子预检
 src/forms.js           重复表单显式校验
 src/theme.js           界面强调色、内容色角色令牌与对比度
 src/backup.js          V3 JSON 备份生成、兼容导入与数据校验
-src/cloud.js           Supabase 登录、会话刷新、云状态读写与同步决策
+src/cloud.js           Supabase 登录、状态同步与通知订阅请求
 src/cloud-config.js    可公开的 Supabase 项目配置
-supabase/schema.sql    云状态表、授权和用户级 RLS
+src/notifications.js   浏览器推送能力、VAPID 公钥和订阅序列化
+manifest.webmanifest   PWA 安装信息
+sw.js                  后台接收通知与点击回到应用
+supabase/schema.sql    云状态、设备订阅、发送去重和 RLS
+supabase/functions/    通知订阅与定时发送 Edge Functions
+supabase/NOTIFICATIONS.md 通知服务部署步骤
 test/schedule.test.js  Node.js 原生测试
 test/calendar.test.js  多日范围与迁移测试
 test/gesture.test.js   长按移动容差测试
@@ -100,5 +112,8 @@ test/forms.test.js     重复表单取消与保存校验测试
 test/theme.test.js     强调色/内容色角色和文字对比度测试
 test/cloud.test.js     云认证请求、同步决策、RLS 与公开配置测试
 test/pwa.test.js       浏览器、Apple 与 PWA 图标声明和资源尺寸测试
+test/notifications.test.js 浏览器推送辅助逻辑测试
+test/reminders.test.js 时区、重复实例和开始/结束提醒测试
+test/push-assets.test.js PWA、Service Worker 与服务端边界测试
 scripts/serve.mjs      零依赖本地静态服务器
 ```

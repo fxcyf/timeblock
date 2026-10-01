@@ -177,6 +177,11 @@ svg { width: 1.25rem; height: 1.25rem; fill: none; stroke: currentColor; stroke-
 .cloud-account span { color: var(--muted); font-size: .8125rem; }
 .cloud-conflict { margin-top: 12px; padding: 13px; border: 1px solid var(--warning-border); border-radius: 10px; color: var(--warning); background: var(--warning-surface); }
 .cloud-conflict p { margin: 0 0 10px; font-size: .875rem; }
+.notification-settings { display: flex; flex-wrap: wrap; gap: 10px 22px; }
+.notification-settings label { min-height: 42px; display: inline-flex; align-items: center; gap: 9px; cursor: pointer; font-weight: 650; }
+.notification-settings input { width: 18px; height: 18px; accent-color: var(--accent); }
+.notification-hint { margin: 10px 0 0; padding: 11px 13px; border-radius: 10px; color: var(--warning); background: var(--warning-surface); font-size: .875rem; line-height: 1.55; }
+.notification-actions { display: flex; gap: 8px; margin-top: 12px; }
 .data-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .data-actions .danger-button { margin-left: auto; }
 
@@ -361,6 +366,7 @@ html.touch-selecting-page body { position: fixed; right: 0; left: 0; width: 100%
   .cloud-auth-actions, .cloud-account-actions { width: 100%; }
   .cloud-auth-actions > button, .cloud-account-actions > button { flex: 1; }
   .cloud-account { align-items: stretch; flex-direction: column; }
+  .notification-actions { display: grid; }
   .data-actions { display: grid; }
   .data-actions .danger-button { margin: 6px 0 0; }
   .content-library-item { grid-template-columns: minmax(0, 1fr) auto; }

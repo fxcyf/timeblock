@@ -81,6 +81,40 @@ test("reads and upserts only the authenticated user's cloud state", async () => 
   assert.match(calls[1].options.headers.Prefer, /resolution=merge-duplicates/);
 });
 
+test("registers and removes push subscriptions through the authenticated function", async () => {
+  const calls = [];
+  const stored = new Map([["timeblock-supabase-session", JSON.stringify({ access_token: "access", refresh_token: "refresh", expires_at: 9_999_999, user: { id: "user-1" } })]]);
+  const cloud = createSupabaseCloud({
+    projectUrl: "https://example.supabase.co",
+    publishableKey: "sb_publishable_test",
+    storage: { getItem: (key) => stored.get(key) || null, setItem: () => {}, removeItem: () => {} },
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      return response(url.endsWith("push-subscriptions") && options.method === "GET" ? { vapidPublicKey: "public-key" } : { enabled: true });
+    },
+    now: () => 1_000_000,
+  });
+  await cloud.restoreSession();
+  assert.equal((await cloud.fetchPushConfig()).vapidPublicKey, "public-key");
+  const payload = {
+    subscription: { endpoint: "https://push.example/device", keys: { p256dh: "p256dh", auth: "auth" } },
+    timezone: "Asia/Shanghai",
+    notifyStart: true,
+    notifyEnd: false,
+  };
+  await cloud.upsertPushSubscription(payload);
+  await cloud.deletePushSubscription(payload.subscription);
+
+  assert.deepEqual(calls.slice(0, 3).map((call) => [call.options.method, call.url]), [
+    ["GET", "https://example.supabase.co/functions/v1/push-subscriptions"],
+    ["POST", "https://example.supabase.co/functions/v1/push-subscriptions"],
+    ["DELETE", "https://example.supabase.co/functions/v1/push-subscriptions"],
+  ]);
+  assert.equal(calls[1].options.headers.Authorization, "Bearer access");
+  assert.deepEqual(JSON.parse(calls[1].options.body), payload);
+  assert.deepEqual(JSON.parse(calls[2].options.body), { subscription: payload.subscription });
+});
+
 test("surfaces Supabase API errors without leaking credentials", async () => {
   const cloud = createSupabaseCloud({
     projectUrl: "https://example.supabase.co",

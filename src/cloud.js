@@ -130,5 +130,31 @@ export function createSupabaseCloud({ projectUrl, publishableKey, fetchImpl = fe
       });
       return Array.isArray(rows) ? rows[0] : rows;
     },
+
+    async fetchPushConfig() {
+      const current = await activeSession();
+      if (!current) throw new Error("请先登录再设置通知");
+      return request("/functions/v1/push-subscriptions", { accessToken: current.access_token });
+    },
+
+    async upsertPushSubscription(subscription) {
+      const current = await activeSession();
+      if (!current) throw new Error("请先登录再设置通知");
+      return request("/functions/v1/push-subscriptions", {
+        method: "POST",
+        accessToken: current.access_token,
+        body: subscription,
+      });
+    },
+
+    async deletePushSubscription(subscription) {
+      const current = await activeSession();
+      if (!current) throw new Error("请先登录再设置通知");
+      return request("/functions/v1/push-subscriptions", {
+        method: "DELETE",
+        accessToken: current.access_token,
+        body: { subscription },
+      });
+    },
   };
 }
