@@ -12,8 +12,11 @@ const reminderFunction = readFileSync(new URL("../supabase/functions/send-remind
 test("ships an installable web app and push notification controls", () => {
   assert.match(html, /rel="manifest" href="manifest\.webmanifest(?:\?v=\d+)?"/);
   assert.match(html, /id="notificationEnableButton"/);
-  assert.match(html, /id="notificationStartSetting"/);
-  assert.match(html, /id="notificationEndSetting"/);
+  assert.doesNotMatch(html, /id="notificationStartSetting"/);
+  assert.doesNotMatch(html, /id="notificationEndSetting"/);
+  for (const id of ["quickRemindAtStart", "quickRemindAtEnd", "blockRemindAtStart", "blockRemindAtEnd", "ruleRemindAtStart", "ruleRemindAtEnd"]) {
+    assert.match(html, new RegExp(`id="${id}"`));
+  }
   assert.equal(manifest.display, "standalone");
   assert.equal(manifest.start_url, "./");
   assert.match(worker, /addEventListener\("push"/);
@@ -35,5 +38,6 @@ test("keeps VAPID private material in server functions", () => {
   assert.match(reminderFunction, /Deno\.env\.get\("VAPID_PRIVATE_KEY"\)/);
   assert.match(reminderFunction, /REMINDER_CRON_SECRET/);
   assert.match(reminderFunction, /push_deliveries/);
+  assert.doesNotMatch(reminderFunction, /subscription\.notify_(?:start|end)/);
   assert.doesNotMatch(html, /VAPID_PRIVATE_KEY|service_role/i);
 });

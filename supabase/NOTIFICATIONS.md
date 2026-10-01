@@ -39,6 +39,6 @@ select vault.create_secret('<cron secret>', 'timeblock_reminder_cron_secret');
 
 ## 4. 验证
 
-登录 Timeblock，在“管理 → 时间块通知”开启开始/结束提醒。iPhone 和 iPad 必须先用 Safari 添加到主屏幕，并从主屏幕启动。macOS 可直接在受支持的 Safari、Chrome 或 Edge 中授权。
+登录 Timeblock，在“管理 → 时间块通知”开启当前设备，再在新建、编辑时间块或重复规则时选择开始提醒、结束提醒或两者。未选择提醒的事件不会推送；旧安排升级后默认静默。iPhone 和 iPad 必须先用 Safari 添加到主屏幕，并从主屏幕启动。macOS 可直接在受支持的 Safari、Chrome 或 Edge 中授权。
 
 可以在 Edge Function 日志确认 `send-reminders` 返回的 `sent`、`removed` 和 `failed` 计数。提醒采用三分钟回看窗口并以 `push_deliveries` 去重，因此短暂的调度延迟不会重复发送。

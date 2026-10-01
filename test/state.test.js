@@ -88,3 +88,27 @@ test("creates hidden one-time content for legacy blocks without a reusable match
   assert.equal(block.fallbackColor, "rose");
   assert.deepEqual(migrateAppState(migrated, "2026-08-30"), migrated);
 });
+
+test("defaults old schedules to silent and preserves event-level reminder choices", () => {
+  const migrated = migrateAppState({
+    rules: [
+      { id: "silent-rule", title: "旧规则", start: 600, duration: 30, days: [1] },
+      { id: "alert-rule", title: "提醒规则", start: 660, duration: 30, days: [1], remindAtStart: true, remindAtEnd: false },
+    ],
+    eventContents: [],
+    recurrenceExceptions: [
+      { id: "exception", ruleId: "alert-rule", date: "2026-08-31", title: "单次改动", start: 670, end: 700, remindAtStart: false, remindAtEnd: true, cancelled: false },
+    ],
+    blocksByDate: {
+      "2026-08-30": [
+        { id: "old", title: "旧安排", start: 600, end: 630 },
+        { id: "alert", title: "提醒安排", start: 660, end: 690, remindAtStart: true },
+      ],
+    },
+  }, "2026-08-30");
+
+  assert.deepEqual(migrated.rules.map((rule) => [rule.remindAtStart, rule.remindAtEnd]), [[false, false], [true, false]]);
+  assert.deepEqual(migrated.blocksByDate["2026-08-30"].map((block) => [block.remindAtStart, block.remindAtEnd]), [[false, false], [true, false]]);
+  assert.equal(migrated.recurrenceExceptions[0].remindAtStart, false);
+  assert.equal(migrated.recurrenceExceptions[0].remindAtEnd, true);
+});

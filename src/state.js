@@ -38,6 +38,8 @@ function normalizeRule(rule, contents) {
     startDate: rule.startDate || "2000-01-01",
     endDate: rule.endDate || null,
     inactiveRanges: Array.isArray(rule.inactiveRanges) ? rule.inactiveRanges : [],
+    remindAtStart: rule.remindAtStart === true,
+    remindAtEnd: rule.remindAtEnd === true,
     contentId: linkedContentId(rule, contents, `rule-${rule.id}`, normalizedFallback),
     fallbackColor: normalizedFallback,
   };
@@ -61,6 +63,8 @@ function normalizeLinkedRecord(item, contents, seed, fallback = DEFAULT_CONTENT_
   const normalizedFallback = normalizeColorValue(fallbackColor ?? color, fallback);
   return {
     ...rest,
+    remindAtStart: item.remindAtStart === true,
+    remindAtEnd: item.remindAtEnd === true,
     contentId: linkedContentId(item, contents, seed, normalizedFallback),
     fallbackColor: normalizedFallback,
   };
@@ -69,7 +73,10 @@ function normalizeLinkedRecord(item, contents, seed, fallback = DEFAULT_CONTENT_
 function normalizeException(item, rules, contents) {
   const rule = rules.find((entry) => entry.id === item.ruleId);
   const source = { ...item, contentId: item.contentId || rule?.contentId };
-  return normalizeLinkedRecord(source, contents, `exception-${item.ruleId}-${item.date}`, rule?.fallbackColor || DEFAULT_RULE_COLOR);
+  const normalized = normalizeLinkedRecord(source, contents, `exception-${item.ruleId}-${item.date}`, rule?.fallbackColor || DEFAULT_RULE_COLOR);
+  if (!Object.hasOwn(item, "remindAtStart")) delete normalized.remindAtStart;
+  if (!Object.hasOwn(item, "remindAtEnd")) delete normalized.remindAtEnd;
+  return normalized;
 }
 
 export function migrateAppState(saved, todayDateKey, defaults = {}) {

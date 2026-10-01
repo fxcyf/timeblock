@@ -56,7 +56,7 @@ Deno.serve(async (request) => {
   try {
     const [stateRows, subscriptions] = await Promise.all([
       rest("timeblock_states?select=user_id,state"),
-      rest("push_subscriptions?select=id,user_id,endpoint,p256dh,auth,timezone,notify_start,notify_end"),
+      rest("push_subscriptions?select=id,user_id,endpoint,p256dh,auth,timezone"),
     ]);
     const states = new Map((stateRows || []).map((row: any) => [row.user_id, row.state]));
     const now = new Date();
@@ -74,10 +74,7 @@ Deno.serve(async (request) => {
         continue;
       }
       for (const clock of clocks) {
-        const reminders = remindersForLocalMinute(state, clock.dateKey, clock.minute, {
-          notifyStart: subscription.notify_start,
-          notifyEnd: subscription.notify_end,
-        });
+        const reminders = remindersForLocalMinute(state, clock.dateKey, clock.minute);
         for (const reminder of reminders) {
           if (!await claimDelivery(subscription, reminder.eventKey)) continue;
           const payload = JSON.stringify({

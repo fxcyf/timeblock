@@ -69,12 +69,9 @@ Deno.serve(async (request) => {
     if (request.method !== "POST") return json({ error: "不支持的请求方法" }, 405);
     const p256dh = payload?.subscription?.keys?.p256dh;
     const auth = payload?.subscription?.keys?.auth;
-    const notifyStart = payload?.notifyStart !== false;
-    const notifyEnd = payload?.notifyEnd !== false;
     if (typeof p256dh !== "string" || !p256dh || typeof auth !== "string" || !auth) {
       return json({ error: "推送订阅密钥无效" }, 400);
     }
-    if (!notifyStart && !notifyEnd) return json({ error: "请至少保留一种提醒" }, 400);
     if (!validTimezone(payload?.timezone)) return json({ error: "设备时区无效" }, 400);
 
     const response = await adminRequest("push_subscriptions?on_conflict=endpoint", {
@@ -86,8 +83,6 @@ Deno.serve(async (request) => {
         p256dh,
         auth,
         timezone: payload.timezone,
-        notify_start: notifyStart,
-        notify_end: notifyEnd,
         user_agent: String(payload?.userAgent || "").slice(0, 500) || null,
       },
     });

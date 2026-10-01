@@ -99,8 +99,6 @@ test("registers and removes push subscriptions through the authenticated functio
   const payload = {
     subscription: { endpoint: "https://push.example/device", keys: { p256dh: "p256dh", auth: "auth" } },
     timezone: "Asia/Shanghai",
-    notifyStart: true,
-    notifyEnd: false,
   };
   await cloud.upsertPushSubscription(payload);
   await cloud.deletePushSubscription(payload.subscription);

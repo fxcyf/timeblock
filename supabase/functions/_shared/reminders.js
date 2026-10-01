@@ -41,6 +41,8 @@ function recurringForDate(state, dateKey) {
       category: override && Object.hasOwn(override, "category") ? override.category : (rule.category || null),
       start: override?.start ?? rule.start,
       end: override?.end ?? rule.start + rule.duration,
+      remindAtStart: override && Object.hasOwn(override, "remindAtStart") ? override.remindAtStart === true : rule.remindAtStart === true,
+      remindAtEnd: override && Object.hasOwn(override, "remindAtEnd") ? override.remindAtEnd === true : rule.remindAtEnd === true,
       sourceRuleId: rule.id,
       recurrenceDate,
     }));
@@ -74,18 +76,16 @@ function reminderFor(block, dateKey, kind, clockDateKey, clockMinute) {
   };
 }
 
-export function remindersForLocalMinute(state, dateKey, minute, preferences = {}) {
-  const notifyStart = preferences.notifyStart !== false;
-  const notifyEnd = preferences.notifyEnd !== false;
+export function remindersForLocalMinute(state, dateKey, minute) {
   const reminders = [];
   for (const block of blocksForDate(state, dateKey)) {
-    if (notifyStart && Number(block.start) === minute) reminders.push(reminderFor(block, dateKey, "start", dateKey, minute));
-    if (notifyEnd && Number(block.end) === minute) reminders.push(reminderFor(block, dateKey, "end", dateKey, minute));
+    if (block.remindAtStart === true && Number(block.start) === minute) reminders.push(reminderFor(block, dateKey, "start", dateKey, minute));
+    if (block.remindAtEnd === true && Number(block.end) === minute) reminders.push(reminderFor(block, dateKey, "end", dateKey, minute));
   }
-  if (notifyEnd && minute === 0) {
+  if (minute === 0) {
     const previousDateKey = addDateKeyDays(dateKey, -1);
     for (const block of blocksForDate(state, previousDateKey)) {
-      if (Number(block.end) === 24 * 60) reminders.push(reminderFor(block, previousDateKey, "end", dateKey, minute));
+      if (block.remindAtEnd === true && Number(block.end) === 24 * 60) reminders.push(reminderFor(block, previousDateKey, "end", dateKey, minute));
     }
   }
   return reminders;

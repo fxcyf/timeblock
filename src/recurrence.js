@@ -40,6 +40,8 @@ export function materializeRecurringForDate(rules, exceptions, dateKey) {
       end: override?.end ?? rule.start + rule.duration,
       contentId: override?.contentId ?? rule.contentId,
       fallbackColor: override?.fallbackColor ?? override?.color ?? rule.fallbackColor ?? rule.color ?? DEFAULT_RULE_COLOR,
+      remindAtStart: override && Object.hasOwn(override, "remindAtStart") ? override.remindAtStart === true : rule.remindAtStart === true,
+      remindAtEnd: override && Object.hasOwn(override, "remindAtEnd") ? override.remindAtEnd === true : rule.remindAtEnd === true,
       sourceRuleId: rule.id,
       recurrenceDate,
       recurring: true,
@@ -59,6 +61,8 @@ export function upsertRecurrenceException(exceptions, rule, dateKey, changes = {
     end: changes.end ?? current?.end ?? rule.start + rule.duration,
     contentId: changes.contentId ?? current?.contentId ?? rule.contentId,
     fallbackColor: changes.fallbackColor ?? changes.color ?? current?.fallbackColor ?? current?.color ?? rule.fallbackColor ?? rule.color ?? DEFAULT_RULE_COLOR,
+    remindAtStart: Object.hasOwn(changes, "remindAtStart") ? changes.remindAtStart === true : (current && Object.hasOwn(current, "remindAtStart") ? current.remindAtStart === true : rule.remindAtStart === true),
+    remindAtEnd: Object.hasOwn(changes, "remindAtEnd") ? changes.remindAtEnd === true : (current && Object.hasOwn(current, "remindAtEnd") ? current.remindAtEnd === true : rule.remindAtEnd === true),
     cancelled: changes.cancelled === true,
   };
   const movedToDate = Object.hasOwn(changes, "movedToDate") ? changes.movedToDate : current?.movedToDate;

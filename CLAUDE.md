@@ -14,7 +14,7 @@
 - `src/schedule.js`：时间解析、冲突检测与空档；`src/recurrence.js`：重复实例、移动例外与规则拆分；`src/state.js`：V2 状态迁移；`src/calendar.js`：日期范围；`src/content.js`：内容三态；`src/gesture.js`：长按手势；`src/grid.js`：小时格；`src/group.js`：整组变换；`src/forms.js`：显式表单校验；`src/theme.js`：颜色与对比度；`src/backup.js`：版本化 JSON 备份校验；`src/cloud.js`：Supabase Auth/REST、同步与通知订阅；`src/notifications.js`：浏览器推送能力与订阅序列化
 - `test/`：Node.js 原生测试；`scripts/serve.mjs`：本地静态服务器
 - 时间在领域层统一表示为当天分钟数，时间轴覆盖 00:00–24:00；支持 1 日、连续 3 日和周一开始的 7 日视图
-- 手动时间块按日期保存在 `blocksByDate`；重复实例由规则动态计算，只在单次修改、移动或取消时写入 `recurrenceExceptions`，跨日期移动使用 `movedToDate` 保持规则归属；时间块/规则只保存 `contentId + fallbackColor`，不保存活跃颜色或完成状态
+- 手动时间块按日期保存在 `blocksByDate`；重复实例由规则动态计算，只在单次修改、移动或取消时写入 `recurrenceExceptions`，跨日期移动使用 `movedToDate` 保持规则归属；时间块/规则保存 `contentId + fallbackColor + remindAtStart/remindAtEnd`，不保存活跃颜色或完成状态，旧安排的提醒字段默认 `false`
 - V2 状态写入浏览器 `localStorage` 的 `timeblock-state-v2`；自动迁移旧单日 `blocks`、V1 状态、已复制的重复时间块和旧 `color` 字段，没有内容引用的旧安排会匹配或创建隐藏 `oneTime` 内容
 - 常驻界面采用文字最少化约定：只显示日期、时间、行动与必要数据，图标按钮必须保留可访问名称
 - 所有宽度的“日程”只保留日期范围控制和全宽 24 小时时间轴，不显示进度或辅助面板；桌面/平板使用时间轴内部滚动，移动端时间轴撑开页面并使用页面级滚动
@@ -23,7 +23,7 @@
 - 所有运行时颜色集中在 `src/theme.js`；颜色系统分为固定冷中性界面、仅表达交互状态的界面强调色，以及独立的协调内容色板；预设/更多颜色采用低饱和、高明度的 pastel 色板，内容原色混入 35% 白色作为大面积显示底色，色板、列表预览和时间块底色所见即所得；普通时间块不显示外边框，相邻色块以 2px 视觉间隙分隔且不改变时间或命中区域，原色色相只保留在调整手柄与拖动预览等状态标记中；浅色强调色自动加深到可读范围；时间块文字从背景色向黑/白派生同色系前景色并至少保持 4.5:1 对比度，不再统一使用近黑色；所有扩展色使用应用内纯色网格选择，不调用系统滑块，浏览器顶栏不跟随强调色变化
 - “管理”页集中提供界面强调色/内容颜色网格、视图偏好、V3 JSON 备份导入导出与清空；应用本地状态仍为 V2、存储键不变
 - 云同步使用 `src/cloud-config.js` 中可公开的 Supabase URL/Publishable key；注册邮件显式回到当前应用路径；未登录时仍只用本地数据，登录后自动推拉完整 V2 状态，日程工具栏提供立即同步按钮，双端同时修改时必须显式选择版本；`supabase/schema.sql` 以 RLS 按 `auth.uid()` 隔离用户数据，禁止前端使用 secret/service-role key
-- 系统通知使用 `manifest.webmanifest` + `sw.js` + Supabase Edge Functions/Cron；登录用户按设备订阅开始/结束提醒，iOS/iPadOS 需先添加到主屏幕；设备时区与偏好保存在 `push_subscriptions`，不进入 V2/备份，定时函数回看三分钟并用 `push_deliveries` 去重；VAPID 私钥、Service Role 和 Cron 密钥只存在服务端，部署步骤见 `supabase/NOTIFICATIONS.md`
+- 系统通知使用 `manifest.webmanifest` + `sw.js` + Supabase Edge Functions/Cron；登录用户按设备订阅通知，每个手动时间块或重复规则单独选择开始/结束提醒，单次例外可覆盖规则，提醒选择进入 V2/备份；iOS/iPadOS 需先添加到主屏幕；设备时区保存在 `push_subscriptions`，定时函数回看三分钟并用 `push_deliveries` 去重；VAPID 私钥、Service Role 和 Cron 密钥只存在服务端，部署步骤见 `supabase/NOTIFICATIONS.md`
 - 日程工具栏固定在可见区域；多选上下文栏显示所选数量与总时长，并支持复制、删除和拖动任意已选项来移动整组，先校验边界与冲突再原子保存并提供一次撤销
 - 触屏窄视口使用 `viewport-fit=cover` 适配 iPadOS 安全区；顶部工具栏和底部导航保留 8px 视觉间距，编辑弹窗居中，内容选择器、多选工具栏和反馈均避开底部导航
 - 重复表单只在保存时显式校验，关闭、取消和 Escape 无条件退出；重复实例编辑/删除支持“仅这一次”和“这一次及以后”

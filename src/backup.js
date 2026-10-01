@@ -66,6 +66,8 @@ function normalizeRule(rule, legacy = false) {
     fallbackColor: paletteColor(rule.fallbackColor ?? rule.color, DEFAULT_RULE_COLOR),
     enabled: rule.enabled !== false,
     inactiveRanges: normalizeInactiveRanges(rule.inactiveRanges),
+    remindAtStart: rule.remindAtStart === true,
+    remindAtEnd: rule.remindAtEnd === true,
   };
   if (Object.hasOwn(rule, "contentId")) normalized.contentId = requiredText(rule.contentId, "事件内容引用");
   return normalized;
@@ -96,6 +98,8 @@ function normalizeBlock(block) {
     start,
     end,
     fallbackColor: paletteColor(block.fallbackColor ?? block.color),
+    remindAtStart: block.remindAtStart === true,
+    remindAtEnd: block.remindAtEnd === true,
   };
   if (Object.hasOwn(block, "category")) normalized.category = optionalText(block.category, "时间块分类");
   if (Object.hasOwn(block, "contentId")) normalized.contentId = requiredText(block.contentId, "事件内容引用");
@@ -119,6 +123,8 @@ function normalizeException(exception) {
     fallbackColor: paletteColor(exception.fallbackColor ?? exception.color, DEFAULT_RULE_COLOR),
     cancelled: exception.cancelled === true,
   };
+  if (Object.hasOwn(exception, "remindAtStart")) normalized.remindAtStart = exception.remindAtStart === true;
+  if (Object.hasOwn(exception, "remindAtEnd")) normalized.remindAtEnd = exception.remindAtEnd === true;
   if (Object.hasOwn(exception, "contentId")) normalized.contentId = requiredText(exception.contentId, "事件内容引用");
   if (exception.movedToDate) normalized.movedToDate = dateKey(exception.movedToDate, "例外移动日期");
   return normalized;

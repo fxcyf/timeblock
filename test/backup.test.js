@@ -6,11 +6,11 @@ import { createBackup, parseBackup } from "../src/backup.js";
 const state = {
   schemaVersion: 2,
   settings: { viewDayCount: 3, snapMinutes: 15, accentColor: "#486f65" },
-  rules: [{ id: "dinner", contentId: "content-dinner", fallbackColor: "apricot", title: "晚餐", category: "用餐", start: 1140, duration: 45, days: [1, 2, 3], startDate: "2026-01-01", endDate: null, enabled: true, inactiveRanges: [] }],
-  recurrenceExceptions: [{ id: "exception-dinner-2026-08-28", ruleId: "dinner", contentId: "content-dinner", fallbackColor: "apricot", date: "2026-08-28", title: "晚餐", category: "用餐", start: 1150, end: 1195, cancelled: false }],
+  rules: [{ id: "dinner", contentId: "content-dinner", fallbackColor: "apricot", title: "晚餐", category: "用餐", start: 1140, duration: 45, days: [1, 2, 3], startDate: "2026-01-01", endDate: null, enabled: true, inactiveRanges: [], remindAtStart: true, remindAtEnd: false }],
+  recurrenceExceptions: [{ id: "exception-dinner-2026-08-28", ruleId: "dinner", contentId: "content-dinner", fallbackColor: "apricot", date: "2026-08-28", title: "晚餐", category: "用餐", start: 1150, end: 1195, remindAtStart: false, remindAtEnd: true, cancelled: false }],
   eventContents: [{ id: "content-dinner", title: "晚餐", category: "用餐", status: "favorite", color: "#b96d4e", sortOrder: 0 }],
   blocksByDate: {
-    "2026-08-28": [{ id: "block-dinner", contentId: "content-dinner", fallbackColor: "apricot", title: "晚餐", category: "用餐", start: 1140, end: 1185 }],
+    "2026-08-28": [{ id: "block-dinner", contentId: "content-dinner", fallbackColor: "apricot", title: "晚餐", category: "用餐", start: 1140, end: 1185, remindAtStart: true, remindAtEnd: true }],
   },
 };
 

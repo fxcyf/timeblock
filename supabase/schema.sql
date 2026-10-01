@@ -52,16 +52,17 @@ create table if not exists public.push_subscriptions (
   p256dh text not null,
   auth text not null,
   timezone text not null,
-  notify_start boolean not null default true,
-  notify_end boolean not null default true,
   user_agent text,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now()),
   unique (endpoint),
   constraint push_subscriptions_endpoint_length check (char_length(endpoint) between 12 and 4096),
-  constraint push_subscriptions_timezone_length check (char_length(timezone) between 1 and 80),
-  constraint push_subscriptions_has_reminder check (notify_start or notify_end)
+  constraint push_subscriptions_timezone_length check (char_length(timezone) between 1 and 80)
 );
+
+alter table public.push_subscriptions drop constraint if exists push_subscriptions_has_reminder;
+alter table public.push_subscriptions drop column if exists notify_start;
+alter table public.push_subscriptions drop column if exists notify_end;
 
 alter table public.push_subscriptions enable row level security;
 

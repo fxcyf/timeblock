@@ -61,6 +61,21 @@ test("moves one recurring occurrence to another date without changing its rule",
   assert.equal(moved.recurrenceDate, "2026-08-25");
 });
 
+test("inherits rule reminders until an occurrence explicitly overrides them", () => {
+  const alertRule = { ...rule, remindAtStart: true, remindAtEnd: false };
+  const [inherited] = materializeRecurringForDate([alertRule], [], "2026-08-25");
+  assert.equal(inherited.remindAtStart, true);
+  assert.equal(inherited.remindAtEnd, false);
+
+  const exceptions = upsertRecurrenceException([], alertRule, "2026-08-25", {
+    remindAtStart: false,
+    remindAtEnd: true,
+  });
+  const [overridden] = materializeRecurringForDate([alertRule], exceptions, "2026-08-25");
+  assert.equal(overridden.remindAtStart, false);
+  assert.equal(overridden.remindAtEnd, true);
+});
+
 test("keeps a materialized historical exception visible while its rule is paused", () => {
   const pausedRule = { ...rule, enabled: false, inactiveRanges: [] };
   const exceptions = upsertRecurrenceException([], rule, "2026-08-25", { start: 1215, end: 1275 });

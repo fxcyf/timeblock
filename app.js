@@ -63,7 +63,6 @@ const STORAGE_KEY = "timeblock-state-v2";
 const LEGACY_STORAGE_KEY = "timeblock-state-v1";
 const LOCAL_UPDATED_AT_KEY = "timeblock-local-updated-at";
 const SYNC_METADATA_KEY = "timeblock-sync-metadata";
-const NOTIFICATION_PREFERENCES_KEY = "timeblock-notification-preferences";
 const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
 const DAY_NAMES = ["日", "一", "二", "三", "四", "五", "六"];
 const FULL_DAY_NAMES = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
@@ -120,13 +119,11 @@ let notificationRegistration = null;
 let notificationSubscription = null;
 let notificationBusy = false;
 let notificationStatusText = "正在检查此设备…";
-let notificationPreferences = readStoredJson(NOTIFICATION_PREFERENCES_KEY, { notifyStart: true, notifyEnd: true });
-if (!notificationPreferences.notifyStart && !notificationPreferences.notifyEnd) notificationPreferences = { notifyStart: true, notifyEnd: true };
 
 const cloud = createSupabaseCloud({ projectUrl: SUPABASE_URL, publishableKey: SUPABASE_PUBLISHABLE_KEY });
 
 const elements = Object.fromEntries([
-  "accentCustomColor", "accentOptions", "actionOptions", "actionPicker", "archiveLibraryContentButton", "archivedEventContentLibrary", "blockCategory", "blockColorField", "blockColorNote", "blockCustomColor", "blockDate", "blockDialog", "blockDialogKicker", "blockDialogTitle", "blockEnd", "blockError", "blockForm", "blockId", "blockOriginalDate", "blockScopeField", "blockStart", "blockTitle", "cancelBlockButton", "cancelContentButton", "cancelGroupButton", "cancelLibraryContentButton", "cancelRuleButton", "cancelSelectionButton", "categoryOptions", "clearDataButton", "closeActionPicker", "closeBlockButton", "closeGroupButton", "closeLibraryContentButton", "closeRuleButton", "cloudAccount", "cloudAccountEmail", "cloudAuthForm", "cloudConflict", "cloudEmail", "cloudPassword", "cloudSignInButton", "cloudSignOutButton", "cloudSignUpButton", "cloudStatus", "cloudSyncButton", "cloudSyncStatus", "cloudUseLocalButton", "cloudUseRemoteButton", "contentCategory", "contentCustomColor", "contentError", "contentFavorite", "contentForm", "contentListView", "contentNewCategory", "contentNewCategoryField", "contentTitle", "copySelectionButton", "dataSummary", "dateEyebrow", "dayOptions", "defaultViewSetting", "deleteBlockButton", "deleteLibraryContentButton", "deleteRuleButton", "deleteSelectionButton", "eventContentLibrary", "exportDataButton", "groupDate", "groupDialog", "groupDialogTitle", "groupError", "groupForm", "groupMode", "groupStart", "importDataButton", "importDataFile", "libraryContentCategory", "libraryContentCustomColor", "libraryContentDialog", "libraryContentDialogTitle", "libraryContentError", "libraryContentForm", "libraryContentId", "libraryContentNewCategory", "libraryContentNewCategoryField", "libraryContentTitle", "manageView", "newContentButton", "newFavoriteButton", "newRuleButton", "nextRangeButton", "notificationDisableButton", "notificationEnableButton", "notificationEndSetting", "notificationInstallHint", "notificationStartSetting", "notificationStatus", "previousRangeButton", "recurringView", "ruleCategory", "ruleCustomColor", "ruleDialog", "ruleDialogTitle", "ruleDuration", "ruleEndDate", "ruleError", "ruleForm", "ruleId", "ruleList", "ruleStart", "ruleStartDate", "ruleTitle", "scheduleSyncButton", "selectedRange", "selectionCount", "selectionModeButton", "selectionToolbar", "shift15Button", "shift30Button", "snapSetting", "timeAxis", "timeline", "timelineDays", "timelineHeaders", "timelineScroll", "toast", "todayButton", "todayView", "topbar", "undoButton", "viewTitle", "weekStrip",
+  "accentCustomColor", "accentOptions", "actionOptions", "actionPicker", "archiveLibraryContentButton", "archivedEventContentLibrary", "blockCategory", "blockColorField", "blockColorNote", "blockCustomColor", "blockDate", "blockDialog", "blockDialogKicker", "blockDialogTitle", "blockEnd", "blockError", "blockForm", "blockId", "blockOriginalDate", "blockRemindAtEnd", "blockRemindAtStart", "blockScopeField", "blockStart", "blockTitle", "cancelBlockButton", "cancelContentButton", "cancelGroupButton", "cancelLibraryContentButton", "cancelRuleButton", "cancelSelectionButton", "categoryOptions", "clearDataButton", "closeActionPicker", "closeBlockButton", "closeGroupButton", "closeLibraryContentButton", "closeRuleButton", "cloudAccount", "cloudAccountEmail", "cloudAuthForm", "cloudConflict", "cloudEmail", "cloudPassword", "cloudSignInButton", "cloudSignOutButton", "cloudSignUpButton", "cloudStatus", "cloudSyncButton", "cloudSyncStatus", "cloudUseLocalButton", "cloudUseRemoteButton", "contentCategory", "contentCustomColor", "contentError", "contentFavorite", "contentForm", "contentListView", "contentNewCategory", "contentNewCategoryField", "contentTitle", "copySelectionButton", "dataSummary", "dateEyebrow", "dayOptions", "defaultViewSetting", "deleteBlockButton", "deleteLibraryContentButton", "deleteRuleButton", "deleteSelectionButton", "eventContentLibrary", "exportDataButton", "groupDate", "groupDialog", "groupDialogTitle", "groupError", "groupForm", "groupMode", "groupStart", "importDataButton", "importDataFile", "libraryContentCategory", "libraryContentCustomColor", "libraryContentDialog", "libraryContentDialogTitle", "libraryContentError", "libraryContentForm", "libraryContentId", "libraryContentNewCategory", "libraryContentNewCategoryField", "libraryContentTitle", "manageView", "newContentButton", "newFavoriteButton", "newRuleButton", "nextRangeButton", "notificationDisableButton", "notificationEnableButton", "notificationInstallHint", "notificationStatus", "previousRangeButton", "quickRemindAtEnd", "quickRemindAtStart", "recurringView", "ruleCategory", "ruleCustomColor", "ruleDialog", "ruleDialogTitle", "ruleDuration", "ruleEndDate", "ruleError", "ruleForm", "ruleId", "ruleList", "ruleRemindAtEnd", "ruleRemindAtStart", "ruleStart", "ruleStartDate", "ruleTitle", "scheduleSyncButton", "selectedRange", "selectionCount", "selectionModeButton", "selectionToolbar", "shift15Button", "shift30Button", "snapSetting", "timeAxis", "timeline", "timelineDays", "timelineHeaders", "timelineScroll", "toast", "todayButton", "todayView", "topbar", "undoButton", "viewTitle", "weekStrip",
 ].map((id) => [id, document.querySelector(`#${id}`)]));
 
 function toDateKey(date) {
@@ -404,21 +401,17 @@ function renderNotifications() {
   const environment = browserPushEnvironment();
   const session = cloud.getSession();
   const permission = environment.supported ? Notification.permission : "unsupported";
-  elements.notificationStartSetting.checked = notificationPreferences.notifyStart;
-  elements.notificationEndSetting.checked = notificationPreferences.notifyEnd;
   elements.notificationInstallHint.hidden = !environment.requiresInstall;
   elements.notificationEnableButton.hidden = Boolean(notificationSubscription);
   elements.notificationDisableButton.hidden = !notificationSubscription;
   elements.notificationDisableButton.disabled = notificationBusy;
-  elements.notificationStartSetting.disabled = notificationBusy;
-  elements.notificationEndSetting.disabled = notificationBusy;
 
   if (environment.requiresInstall) notificationStatusText = "先添加到 iPhone 或 iPad 主屏幕";
   else if (!environment.supported) notificationStatusText = "此浏览器不支持网页推送";
   else if (!session) notificationStatusText = "登录后可在此设备开启";
   else if (permission === "denied") notificationStatusText = "通知已被系统拒绝，请在系统设置中允许";
   else if (notificationSubscription && !notificationBusy && !/失败|不可用|尚未配置/.test(notificationStatusText)) notificationStatusText = "此设备已开启";
-  else if (!notificationSubscription && !notificationBusy && !/失败|不可用|尚未配置/.test(notificationStatusText)) notificationStatusText = "可在时间块开始和结束时提醒";
+  else if (!notificationSubscription && !notificationBusy && !/失败|不可用|尚未配置/.test(notificationStatusText)) notificationStatusText = "开启后只发送时间块中已选择的提醒";
 
   elements.notificationStatus.textContent = notificationBusy ? "正在更新此设备…" : notificationStatusText;
   elements.notificationEnableButton.disabled = notificationBusy
@@ -444,8 +437,6 @@ async function saveNotificationSubscription() {
   await cloud.upsertPushSubscription({
     subscription: pushSubscriptionPayload(notificationSubscription),
     timezone: notificationTimezone(),
-    notifyStart: notificationPreferences.notifyStart,
-    notifyEnd: notificationPreferences.notifyEnd,
     userAgent: navigator.userAgent,
   });
   notificationStatusText = "此设备已开启";
@@ -525,31 +516,6 @@ async function disablePushNotifications({ silent = false } = {}) {
   notificationStatusText = serverError ? `关闭失败：${cloudErrorMessage(serverError)}` : "此设备已关闭";
   renderNotifications();
   if (!silent) showToast(serverError ? notificationStatusText : "已关闭此设备的通知");
-}
-
-async function updateNotificationPreferences(event) {
-  const notifyStart = elements.notificationStartSetting.checked;
-  const notifyEnd = elements.notificationEndSetting.checked;
-  if (!notifyStart && !notifyEnd) {
-    event.target.checked = true;
-    showToast("请至少保留一种提醒");
-    return;
-  }
-  notificationPreferences = { notifyStart, notifyEnd };
-  writeStorageValue(NOTIFICATION_PREFERENCES_KEY, JSON.stringify(notificationPreferences));
-  if (!notificationSubscription || !cloud.getSession()) { renderNotifications(); return; }
-  notificationBusy = true;
-  renderNotifications();
-  try {
-    await saveNotificationSubscription();
-    showToast("通知偏好已更新");
-  } catch (error) {
-    notificationStatusText = `更新失败：${cloudErrorMessage(error)}`;
-    showToast(notificationStatusText);
-  } finally {
-    notificationBusy = false;
-    renderNotifications();
-  }
 }
 
 function syncMetaFor(userId) {
@@ -1045,6 +1011,8 @@ function openBlockDialog(id, dateKey) {
   elements.blockDate.value = dateKey;
   elements.blockStart.value = displayScheduleTime(draft.start);
   elements.blockEnd.value = displayScheduleTime(draft.end);
+  elements.blockRemindAtStart.checked = draft.remindAtStart === true;
+  elements.blockRemindAtEnd.checked = draft.remindAtEnd === true;
   elements.blockScopeField.hidden = !existing?.recurring;
   elements.deleteBlockButton.hidden = !existing;
   const sourceContent = linkedContent(draft);
@@ -1070,6 +1038,8 @@ function blockDraftFromForm(existing) {
     category: elements.blockCategory.value.trim() || null,
     start: parseScheduleTime(elements.blockStart.value),
     end: parseScheduleTime(elements.blockEnd.value, true),
+    remindAtStart: elements.blockRemindAtStart.checked,
+    remindAtEnd: elements.blockRemindAtEnd.checked,
     fallbackColor: readColorChoice(elements.blockForm, "blockColor", elements.blockCustomColor),
   };
   delete candidate.color;
@@ -1174,6 +1144,8 @@ function openRuleDialog(ruleId = null) {
   elements.ruleDuration.value = String(rule?.duration ?? 45);
   elements.ruleStartDate.value = rule?.startDate || focusDateKey;
   elements.ruleEndDate.value = rule?.endDate || "";
+  elements.ruleRemindAtStart.checked = rule?.remindAtStart === true;
+  elements.ruleRemindAtEnd.checked = rule?.remindAtEnd === true;
   elements.deleteRuleButton.hidden = !rule;
   buildDayOptions(rule?.days);
   setColorChoice(elements.ruleForm, "ruleColor", elements.ruleCustomColor, linkedContentColor(rule, state.eventContents, DEFAULT_RULE_COLOR), DEFAULT_RULE_COLOR);
@@ -1222,6 +1194,8 @@ function saveRule(event) {
     days,
     startDate: elements.ruleStartDate.value,
     endDate: elements.ruleEndDate.value || null,
+    remindAtStart: elements.ruleRemindAtStart.checked,
+    remindAtEnd: elements.ruleRemindAtEnd.checked,
     fallbackColor: selectedColor,
     enabled: existing?.enabled ?? true,
     inactiveRanges: existing?.inactiveRanges || [],
@@ -1516,6 +1490,8 @@ function showActionPicker(point) {
   selectionPoint = point;
   const parts = dateParts(activeSelection.date);
   elements.selectedRange.textContent = `${viewDayCount === 1 ? "" : `${parts.month}/${parts.day} · `}${formatTimeRange(activeSelection.start, activeSelection.end)}`;
+  elements.quickRemindAtStart.checked = false;
+  elements.quickRemindAtEnd.checked = false;
   renderEventContents();
   showContentList();
   elements.actionPicker.hidden = false;
@@ -1549,6 +1525,8 @@ function createBlockFromContent(content, previousOverride = null) {
     category: content.category || null,
     start: range.start,
     end: range.end,
+    remindAtStart: elements.quickRemindAtStart.checked,
+    remindAtEnd: elements.quickRemindAtEnd.checked,
   }]);
   clearTimelineSelection();
   commitChange(previous, `${displayScheduleTime(range.start)}—${displayScheduleTime(range.end)} 已安排`);
@@ -2052,8 +2030,6 @@ elements.cloudUseRemoteButton.addEventListener("click", () => resolveCloudConfli
 elements.cloudUseLocalButton.addEventListener("click", () => resolveCloudConflict(false));
 elements.notificationEnableButton.addEventListener("click", enablePushNotifications);
 elements.notificationDisableButton.addEventListener("click", () => disablePushNotifications());
-elements.notificationStartSetting.addEventListener("change", updateNotificationPreferences);
-elements.notificationEndSetting.addEventListener("change", updateNotificationPreferences);
 elements.defaultViewSetting.addEventListener("change", () => changeViewDayCount(Number(elements.defaultViewSetting.value)));
 elements.snapSetting.addEventListener("change", () => { state.settings.snapMinutes = Number(elements.snapSetting.value); saveState(); showToast(`已改为 ${state.settings.snapMinutes} 分钟吸附`); });
 elements.accentOptions.addEventListener("click", (event) => {

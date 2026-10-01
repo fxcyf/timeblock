@@ -133,10 +133,7 @@
 
           <section class="manage-section" aria-labelledby="notificationTitle">
             <div class="manage-heading"><div><h3 id="notificationTitle">时间块通知</h3><p id="notificationStatus" role="status">正在检查此设备…</p></div></div>
-            <div class="notification-settings">
-              <label><input id="notificationStartSetting" type="checkbox" checked /><span>开始时提醒</span></label>
-              <label><input id="notificationEndSetting" type="checkbox" checked /><span>结束时提醒</span></label>
-            </div>
+            <p class="notification-description">这里只开启设备通知；是否提醒以及在开始还是结束时提醒，由每个时间块单独选择。</p>
             <p class="notification-hint" id="notificationInstallHint" hidden>在 Safari 中选择“共享 → 添加到主屏幕”，再从主屏幕打开 Timeblock。</p>
             <div class="notification-actions">
               <button type="button" class="primary-button" id="notificationEnableButton">在此设备开启</button>
@@ -168,6 +165,7 @@
         <div><span id="selectedRange"></span><strong class="sr-only" id="actionPickerTitle">选择事件内容</strong></div>
         <button type="button" id="closeActionPicker" aria-label="取消选择">×</button>
       </div>
+      <fieldset class="reminder-field quick-reminder-field"><legend>提醒</legend><label><input id="quickRemindAtStart" type="checkbox" /><span>开始时</span></label><label><input id="quickRemindAtEnd" type="checkbox" /><span>结束时</span></label></fieldset>
       <div id="contentListView">
         <div class="action-options" id="actionOptions"></div>
         <button type="button" class="custom-action" id="newContentButton"><svg><use href="#icon-plus"></use></svg>新建一次性内容</button>
@@ -228,6 +226,7 @@
           <label class="field"><span>开始</span><input id="blockStart" inputmode="numeric" placeholder="00:00" required /></label>
           <label class="field"><span>结束</span><input id="blockEnd" inputmode="numeric" placeholder="24:00" required /></label>
         </div>
+        <fieldset class="reminder-field"><legend>提醒</legend><label><input id="blockRemindAtStart" type="checkbox" /><span>开始时</span></label><label><input id="blockRemindAtEnd" type="checkbox" /><span>结束时</span></label></fieldset>
         <fieldset class="color-field" id="blockColorField"><legend>颜色</legend><div class="color-options">
           <label><input type="radio" name="blockColor" value="apricot" checked /><span class="apricot"></span></label>
           <label><input type="radio" name="blockColor" value="sage" /><span class="sage"></span></label>
@@ -254,6 +253,7 @@
         <div class="field-row"><label class="field"><span>开始时间</span><input id="ruleStart" type="time" aria-describedby="ruleStartError" /><small class="field-error" id="ruleStartError"></small></label><label class="field"><span>持续时长</span><input id="ruleDuration" type="number" min="5" max="1440" step="5" aria-describedby="ruleDurationError" /><small class="field-error" id="ruleDurationError"></small></label></div>
         <fieldset class="days-field"><legend>重复日期</legend><div class="day-options" id="dayOptions"></div><small class="field-error" id="ruleDaysError"></small></fieldset>
         <div class="field-row"><label class="field"><span>生效日期</span><input id="ruleStartDate" type="date" aria-describedby="ruleStartDateError" /><small class="field-error" id="ruleStartDateError"></small></label><label class="field"><span>结束日期（可选）</span><input id="ruleEndDate" type="date" aria-describedby="ruleEndDateError" /><small class="field-error" id="ruleEndDateError"></small></label></div>
+        <fieldset class="reminder-field"><legend>每次提醒</legend><label><input id="ruleRemindAtStart" type="checkbox" /><span>开始时</span></label><label><input id="ruleRemindAtEnd" type="checkbox" /><span>结束时</span></label></fieldset>
         <fieldset class="color-field"><legend>颜色</legend><div class="color-options">
           <label><input type="radio" name="ruleColor" value="apricot" checked /><span class="apricot"></span></label>
           <label><input type="radio" name="ruleColor" value="sage" /><span class="sage"></span></label>
