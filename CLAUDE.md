@@ -10,7 +10,7 @@
 ## 当前架构
 
 - 零依赖响应式 Web 原型，使用原生 HTML、CSS 和 ECMAScript modules
-- `index.html` / `styles.css` / `app.js`：页面结构、视觉与交互状态
+- `index.html` / `styles.css` / `app.js`：页面结构、视觉与交互状态；`manifest.webmanifest` / `icons/`：浏览器、iOS 与 PWA 应用图标
 - `src/schedule.js`：时间解析、冲突检测与空档；`src/recurrence.js`：重复实例、移动例外与规则拆分；`src/state.js`：V2 状态迁移；`src/calendar.js`：日期范围；`src/content.js`：内容三态；`src/gesture.js`：长按手势；`src/grid.js`：小时格；`src/group.js`：整组变换；`src/forms.js`：显式表单校验；`src/theme.js`：颜色与对比度；`src/backup.js`：版本化 JSON 备份校验；`src/cloud.js`：Supabase Auth/REST 与同步决策
 - `test/`：Node.js 原生测试；`scripts/serve.mjs`：本地静态服务器
 - 时间在领域层统一表示为当天分钟数，时间轴覆盖 00:00–24:00；支持 1 日、连续 3 日和周一开始的 7 日视图

@@ -24,6 +24,7 @@
 - **数据管理**：时间块只表达安排，不记录完成状态。“管理”页可导出/导入 V3 JSON 备份、调整时间吸附、默认视图和界面强调色，或确认后清空。
 - **更易阅读**：正文以 17px 为基准，桌面操作区不低于 40px、触屏操作区不低于 44px；统一主题焦点环，不依赖浏览器默认黑色描边。
 - **安全区适配**：移动端顶部工具栏和底部导航均与屏幕边缘留白，底部导航采用完整圆角边框；编辑弹窗居中显示，内容选择、多选操作和撤销反馈不会占用底部高频导航区。
+- **统一应用图标**：浏览器标签、iOS 主屏和安装后的 PWA 都使用与页面品牌标记一致的三段时间块图标，并为不同启动器提供标准尺寸和可遮罩版本。
 
 完整产品取舍与交互状态见 `PRODUCT_DESIGN.md`。
 
@@ -69,6 +70,8 @@ npm test
 index.html             页面结构与可访问性语义
 styles.css             响应式视觉与交互状态
 app.js                 页面状态、持久化和用户交互
+manifest.webmanifest   PWA 名称、启动范围、主题与应用图标声明
+icons/                 浏览器 favicon、Apple Touch Icon 与 PWA 图标
 src/schedule.js        时间解析、冲突与空档领域逻辑
 src/recurrence.js      动态重复实例、例外与规则拆分
 src/state.js           V2 状态与旧数据迁移
@@ -96,5 +99,6 @@ test/layout.test.js    iPadOS 安全区与移动端边缘间距测试
 test/forms.test.js     重复表单取消与保存校验测试
 test/theme.test.js     强调色/内容色角色和文字对比度测试
 test/cloud.test.js     云认证请求、同步决策、RLS 与公开配置测试
+test/pwa.test.js       浏览器、Apple 与 PWA 图标声明和资源尺寸测试
 scripts/serve.mjs      零依赖本地静态服务器
 ```
